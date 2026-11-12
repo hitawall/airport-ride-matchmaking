@@ -24,32 +24,47 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
     if (_index >= widget.candidates.length) return;
     final candidate = widget.candidates[_index];
     setState(() => _loading = true);
+
+    Map<String, dynamic>? result;
+    String? errorMessage;
     try {
       final api = ref.read(apiClientProvider);
-      final result = await api.post("/api/matches", {
+      result = await api.post("/api/matches", {
         "rideRequestId": widget.rideRequestId,
         "candidateRideRequestId": candidate.rideRequestId,
         "action": action,
       }) as Map<String, dynamic>;
+    } on ApiException catch (e) {
+      // The candidate may have already been excluded server-side (matched
+      // elsewhere, already rejected) -- that's not a failure from the user's
+      // perspective, just advance. Anything else, surface it.
+      errorMessage = e.statusCode == 409 ? null : e.message;
+    }
+    if (!mounted) return;
 
-      if (result["status"] == "mutual") {
-        if (mounted) context.go("/mutual-match/${result["id"]}");
-        return;
-      }
-    } on ApiException {
-      // Fall through to advancing the deck either way -- the candidate either
-      // got excluded server-side (rejected/matched elsewhere) or will show up
-      // again on the next poll if this was transient.
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _index++;
-        });
-      }
-      if (_index >= widget.candidates.length && mounted) {
-        context.go("/awaiting-match/${widget.rideRequestId}");
-      }
+    if (result?["status"] == "mutual") {
+      context.go("/mutual-match/${result!["id"]}");
+      return;
+    }
+
+    setState(() {
+      _loading = false;
+      _index++;
+    });
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        content: Text(
+          errorMessage ?? (action == "like" ? "Liked -- we'll let you know if it's mutual" : "Passed"),
+        ),
+      ),
+    );
+
+    if (_index >= widget.candidates.length) {
+      context.go("/awaiting-match/${widget.rideRequestId}");
     }
   }
 
