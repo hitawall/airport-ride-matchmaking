@@ -1,4 +1,3 @@
-# Customize this file for your stack. Uncomment and adapt the relevant section.
 name: CI
 
 on:
@@ -8,36 +7,32 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  api:
+    name: API (Next.js / TypeScript)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo lint typecheck
 
-      # --- Node.js / TypeScript ---
-      # - uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 20
-      #     cache: pnpm
-      # - run: pnpm install --frozen-lockfile
-      # - run: pnpm lint
-      # - run: pnpm test
-
-      # --- Python ---
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.12"
-      # - run: pip install -r requirements.txt
-      # - run: pytest
-
-      # --- Go ---
-      # - uses: actions/setup-go@v5
-      #   with:
-      #     go-version: stable
-      # - run: go test ./...
-
-      # --- Rust ---
-      # - uses: dtolnay/rust-toolchain@stable
-      # - run: cargo test
-
-      - name: Placeholder — configure your stack above, then remove this step
-        run: echo "CI not yet configured. See .github/workflows/ci.yml."
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

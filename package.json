@@ -1,0 +1,22 @@
+{
+  "name": "airport-ride-matchmaking",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @airport-ride-matchmaking/db generate",
+    "db:migrate": "pnpm --filter @airport-ride-matchmaking/db migrate"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.1.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@11.1.2"
+}

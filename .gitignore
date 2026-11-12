@@ -36,3 +36,9 @@ coverage/
 # Temp
 *.tmp
 *.bak
+.vercel
+.env*
+
+# Turborepo
+.turbo/
+*.tsbuildinfo
