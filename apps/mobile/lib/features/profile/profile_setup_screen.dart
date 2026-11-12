@@ -87,13 +87,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         photoUrl = await api.uploadProfilePhoto(_photoBytes!, _photoFilename!, "image/jpeg");
       }
 
-      await api.put("/api/profile/me", {
+      final body = {
         "displayName": _nameController.text.trim(),
         "gender": _gender,
         "genderPreference": _genderPreference,
-        if (photoUrl != null) "profilePhotoUrl": photoUrl,
-        if (_bioController.text.trim().isNotEmpty) "bio": _bioController.text.trim(),
-      });
+        "profilePhotoUrl": photoUrl,
+        "bio": _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : null,
+      }..removeWhere((key, value) => value == null);
+
+      await api.put("/api/profile/me", body);
 
       if (!mounted) return;
       context.go("/create-ride");
