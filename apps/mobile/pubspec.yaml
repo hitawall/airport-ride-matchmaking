@@ -38,29 +38,23 @@ dependencies:
 
   # State management
   flutter_riverpod: ^2.6.0
-  riverpod_annotation: ^2.6.0
-
-  # Models
-  freezed_annotation: ^2.4.0
-  json_annotation: ^4.9.0
-
-  # Maps (same widget/API across web + iOS + Android)
-  google_maps_flutter: ^2.10.0
-  google_maps_flutter_web: ^0.5.10
 
   # Backend integration
   http: ^1.2.0
+  http_parser: ^4.1.0
   flutter_secure_storage: ^9.2.0
-  pusher_channels_flutter: ^2.4.0
   image_picker: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.4.0
-  freezed: ^2.5.0
-  json_serializable: ^6.9.0
+
+# NOTE: google_maps_flutter(_web) and pusher_channels_flutter are deliberately
+# NOT included yet -- GOOGLE_MAPS_API_KEY and Pusher credentials aren't
+# provisioned. Destination entry uses a curated Bengaluru-locality dropdown
+# (packages/db h3 matching only needs lat/lng, not a live map) and chat/match
+# updates use polling. Both are straightforward to add once those keys exist.
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
