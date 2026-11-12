@@ -10,6 +10,7 @@
         "JWT_SECRET",
         "MSG91_AUTH_KEY",
         "MSG91_TEMPLATE_ID",
+        "OTP_TEST_MODE",
         "PUSHER_APP_ID",
         "PUSHER_KEY",
         "PUSHER_SECRET",

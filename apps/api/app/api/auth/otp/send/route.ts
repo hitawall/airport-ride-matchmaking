@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb, otpRequests } from "@airport-ride-matchmaking/db";
 import { otpSendSchema } from "@/lib/schemas";
 import { jsonError } from "@/lib/api-response";
 import { sendOtp } from "@/lib/msg91";
+import { env } from "@/lib/env";
 
 const MAX_SENDS_PER_HOUR = 3;
 const OTP_TTL_SECONDS = 5 * 60;
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
     return jsonError("Too many OTP requests. Try again later.", 429);
   }
 
-  const { requestId } = await sendOtp(phone);
+  const { requestId } = env.otpTestMode ? { requestId: `test-${randomUUID()}` } : await sendOtp(phone);
   const expiresAt = new Date(Date.now() + OTP_TTL_SECONDS * 1000);
   await db.insert(otpRequests).values({
     phone,
@@ -32,5 +34,9 @@ export async function POST(request: Request) {
     expiresAt,
   });
 
-  return NextResponse.json({ requestId, expiresInSeconds: OTP_TTL_SECONDS });
+  return NextResponse.json({
+    requestId,
+    expiresInSeconds: OTP_TTL_SECONDS,
+    ...(env.otpTestMode && { testMode: true }),
+  });
 }

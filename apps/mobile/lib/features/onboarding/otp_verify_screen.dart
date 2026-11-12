@@ -5,10 +5,16 @@ import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
 
 class OtpVerifyScreen extends ConsumerStatefulWidget {
-  const OtpVerifyScreen({required this.phone, required this.requestId, super.key});
+  const OtpVerifyScreen({
+    required this.phone,
+    required this.requestId,
+    this.testMode = false,
+    super.key,
+  });
 
   final String phone;
   final String requestId;
+  final bool testMode;
 
   @override
   ConsumerState<OtpVerifyScreen> createState() => _OtpVerifyScreenState();
@@ -58,6 +64,19 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("We sent a code to ${widget.phone}"),
+            if (widget.testMode) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  "Trial mode: no real SMS was sent. Enter 000000 to continue.",
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _controller,

@@ -31,7 +31,14 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
       final api = ref.read(apiClientProvider);
       final result = await api.post("/api/auth/otp/send", {"phone": phone});
       if (!mounted) return;
-      context.push("/otp", extra: {"phone": phone, "requestId": result["requestId"]});
+      context.push(
+        "/otp",
+        extra: {
+          "phone": phone,
+          "requestId": result["requestId"],
+          "testMode": result["testMode"] == true,
+        },
+      );
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
