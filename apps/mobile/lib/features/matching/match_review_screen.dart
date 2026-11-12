@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/home_leading_button.dart";
 import "../../data/models.dart";
 
 class MatchReviewScreen extends ConsumerStatefulWidget {
@@ -60,7 +61,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
     final candidate = widget.candidates[_index];
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Possible matches")),
+      appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Possible matches")),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

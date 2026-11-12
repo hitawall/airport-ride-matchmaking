@@ -123,7 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text("Looking for your match"),
             subtitle: const Text("We're checking for travelers heading your way."),
             trailing: FilledButton(
-              onPressed: () => context.push("/awaiting-match/$_rideRequestId"),
+              onPressed: () => context.go("/awaiting-match/$_rideRequestId"),
               child: const Text("Check status"),
             ),
           ),
@@ -135,7 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text("You have a match!"),
             subtitle: const Text("Coordinate meeting at the pickup zone."),
             trailing: FilledButton(
-              onPressed: _activeMatchId == null ? null : () => context.push("/chat/$_activeMatchId"),
+              onPressed: _activeMatchId == null ? null : () => context.go("/chat/$_activeMatchId"),
               child: const Text("Open chat"),
             ),
           ),
@@ -147,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text("Ready to find a ride partner?"),
             subtitle: const Text("Tell us your flight and destination."),
             trailing: FilledButton(
-              onPressed: () => context.push("/create-ride"),
+              onPressed: () => context.go("/create-ride"),
               child: const Text("Start"),
             ),
           ),

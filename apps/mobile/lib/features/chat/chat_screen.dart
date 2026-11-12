@@ -3,6 +3,7 @@ import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/home_leading_button.dart";
 import "../../data/models.dart";
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -107,6 +108,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: homeLeadingButton(context),
         title: const Text("Chat"),
         actions: [
           PopupMenuButton<String>(

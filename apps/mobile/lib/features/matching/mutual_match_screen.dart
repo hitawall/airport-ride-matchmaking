@@ -2,6 +2,7 @@ import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/auth_controller.dart";
+import "../../core/home_leading_button.dart";
 
 class MutualMatchScreen extends ConsumerWidget {
   const MutualMatchScreen({required this.matchId, super.key});
@@ -13,6 +14,7 @@ class MutualMatchScreen extends ConsumerWidget {
     final api = ref.watch(apiClientProvider);
 
     return Scaffold(
+      appBar: AppBar(leading: homeLeadingButton(context)),
       body: FutureBuilder(
         future: api.get("/api/matches/mine"),
         builder: (context, snapshot) {
