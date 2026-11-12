@@ -101,19 +101,28 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             onChanged: (v) => setState(() => _destination = v),
           ),
           const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            shape: const RoundedRectangleBorder(
-              side: BorderSide(color: Colors.grey),
-              borderRadius: BorderRadius.all(Radius.circular(4)),
+          Material(
+            color: Theme.of(context).inputDecorationTheme.fillColor,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _pickArrivalTime,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _arrivalAt == null
+                            ? "Expected arrival time"
+                            : "Arriving ${_arrivalAt!.toLocal()}".split(".").first,
+                      ),
+                    ),
+                    const Icon(Icons.schedule),
+                  ],
+                ),
+              ),
             ),
-            title: Text(
-              _arrivalAt == null
-                  ? "Expected arrival time"
-                  : "Arriving ${_arrivalAt!.toLocal()}".split(".").first,
-            ),
-            trailing: const Icon(Icons.schedule),
-            onTap: _pickArrivalTime,
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
