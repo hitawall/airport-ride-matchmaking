@@ -134,7 +134,13 @@ export const chatMessages = pgTable(
       .notNull()
       .references(() => users.id),
     body: text("body").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // precision: 3 (milliseconds) so this round-trips exactly through JSON for
+    // the /messages?after= polling cursor -- without it, Postgres' microsecond
+    // precision means a cursor built from a truncated-to-ms timestamp can still
+    // match the very message it's meant to exclude.
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
     readAt: timestamp("read_at", { withTimezone: true }),
   },
   (table) => [index("chat_messages_match_created_idx").on(table.matchId, table.createdAt)],

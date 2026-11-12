@@ -8,6 +8,13 @@
       "when": 1794484291936,
       "tag": "0000_gifted_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794494039094,
+      "tag": "0001_quiet_wolfpack",
+      "breakpoints": true
     }
   ]
 }
