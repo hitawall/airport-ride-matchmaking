@@ -25,10 +25,40 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _bioController = TextEditingController();
   String _gender = "prefer_not_to_say";
   String _genderPreference = "any";
+  String? _existingPhotoUrl;
   Uint8List? _photoBytes;
   String? _photoFilename;
   bool _loading = false;
+  bool _loadingExisting = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    final api = ref.read(apiClientProvider);
+    try {
+      final profile = await api.get("/api/profile/me") as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _nameController.text = profile["displayName"] as String? ?? "";
+        _gender = profile["gender"] as String? ?? _gender;
+        _genderPreference = profile["genderPreference"] as String? ?? _genderPreference;
+        _bioController.text = profile["bio"] as String? ?? "";
+        _existingPhotoUrl = profile["profilePhotoUrl"] as String?;
+      });
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) {
+        if (mounted) setState(() => _error = e.message);
+      }
+      // 404 -- no profile yet, keep the blank defaults (first-time setup).
+    } finally {
+      if (mounted) setState(() => _loadingExisting = false);
+    }
+  }
 
   Future<void> _pickPhoto() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024);
@@ -52,27 +82,20 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     try {
       final api = ref.read(apiClientProvider);
 
-      String? photoUrl;
+      String? photoUrl = _existingPhotoUrl;
       if (_photoBytes != null) {
         photoUrl = await api.uploadProfilePhoto(_photoBytes!, _photoFilename!, "image/jpeg");
       }
 
-      await api.put("/api/profile/me", {
+      final body = {
         "displayName": _nameController.text.trim(),
         "gender": _gender,
         "genderPreference": _genderPreference,
-        if (_bioController.text.trim().isNotEmpty) "bio": _bioController.text.trim(),
-      });
+        "profilePhotoUrl": photoUrl,
+        "bio": _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : null,
+      }..removeWhere((key, value) => value == null);
 
-      if (photoUrl != null) {
-        await api.put("/api/profile/me", {
-          "displayName": _nameController.text.trim(),
-          "gender": _gender,
-          "genderPreference": _genderPreference,
-          "profilePhotoUrl": photoUrl,
-          if (_bioController.text.trim().isNotEmpty) "bio": _bioController.text.trim(),
-        });
-      }
+      await api.put("/api/profile/me", body);
 
       if (!mounted) return;
       context.go("/create-ride");
@@ -85,6 +108,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingExisting) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text("Set up your profile")),
       body: ListView(
@@ -95,8 +122,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               onTap: _pickPhoto,
               child: CircleAvatar(
                 radius: 48,
-                backgroundImage: _photoBytes != null ? MemoryImage(_photoBytes!) : null,
-                child: _photoBytes == null ? const Icon(Icons.add_a_photo) : null,
+                backgroundImage: _photoBytes != null
+                    ? MemoryImage(_photoBytes!)
+                    : (_existingPhotoUrl != null ? NetworkImage(_existingPhotoUrl!) : null),
+                child: _photoBytes == null && _existingPhotoUrl == null
+                    ? const Icon(Icons.add_a_photo)
+                    : null,
               ),
             ),
           ),
