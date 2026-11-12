@@ -98,7 +98,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       await api.put("/api/profile/me", body);
 
       if (!mounted) return;
-      context.go("/create-ride");
+      context.go("/home");
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {

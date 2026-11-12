@@ -6,7 +6,7 @@ import "features/chat/chat_screen.dart";
 import "features/matching/match_list_screen.dart";
 import "features/matching/match_review_screen.dart";
 import "features/matching/mutual_match_screen.dart";
-import "features/onboarding/home_redirect_screen.dart";
+import "features/onboarding/home_screen.dart";
 import "features/onboarding/legal_interstitial_screen.dart";
 import "features/onboarding/otp_verify_screen.dart";
 import "features/onboarding/phone_entry_screen.dart";
@@ -43,7 +43,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(path: "/home", builder: (context, state) => const HomeRedirectScreen()),
+      GoRoute(path: "/home", builder: (context, state) => const HomeScreen()),
       GoRoute(path: "/profile-setup", builder: (context, state) => const ProfileSetupScreen()),
       GoRoute(path: "/create-ride", builder: (context, state) => const CreateRideRequestScreen()),
       GoRoute(
