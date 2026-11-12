@@ -8,6 +8,10 @@ export const env = {
   get jwtSecret() {
     return required("JWT_SECRET");
   },
+  /** Trial-only bypass: accepts a fixed dev OTP code instead of sending real SMS. Never enable with real users. */
+  get otpTestMode() {
+    return process.env.OTP_TEST_MODE === "true";
+  },
   get msg91AuthKey() {
     return required("MSG91_AUTH_KEY");
   },

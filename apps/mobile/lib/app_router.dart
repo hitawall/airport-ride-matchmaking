@@ -36,7 +36,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: "/otp",
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
-          return OtpVerifyScreen(phone: extra["phone"] as String, requestId: extra["requestId"] as String);
+          return OtpVerifyScreen(
+            phone: extra["phone"] as String,
+            requestId: extra["requestId"] as String,
+            testMode: extra["testMode"] as bool? ?? false,
+          );
         },
       ),
       GoRoute(path: "/home", builder: (context, state) => const HomeRedirectScreen()),

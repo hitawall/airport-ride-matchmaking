@@ -5,6 +5,9 @@ import { otpVerifySchema } from "@/lib/schemas";
 import { jsonError } from "@/lib/api-response";
 import { verifyOtp } from "@/lib/msg91";
 import { issueToken } from "@/lib/auth";
+import { env } from "@/lib/env";
+
+const TEST_MODE_CODE = "000000";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
     .limit(1);
   if (!otpRow) return jsonError("OTP request not found or expired", 400);
 
-  const ok = await verifyOtp(phone, code);
+  const ok = env.otpTestMode ? code === TEST_MODE_CODE : await verifyOtp(phone, code);
   if (!ok) return jsonError("Invalid code", 400);
 
   await db.update(otpRequests).set({ verifiedAt: new Date() }).where(eq(otpRequests.id, otpRow.id));
