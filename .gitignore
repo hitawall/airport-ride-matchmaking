@@ -38,6 +38,8 @@ coverage/
 *.bak
 .vercel
 .env*
+!.env.example
+!**/.env.example
 
 # Turborepo
 .turbo/

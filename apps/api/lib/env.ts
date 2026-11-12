@@ -26,4 +26,7 @@ export const env = {
   get pusherCluster() {
     return required("PUSHER_CLUSTER");
   },
+  get cronSecret() {
+    return required("CRON_SECRET");
+  },
 };
