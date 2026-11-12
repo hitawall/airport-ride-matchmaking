@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/internal/ride-requests/sweep",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
