@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/home_leading_button.dart";
 import "../../data/bengaluru_localities.dart";
 
 class CreateRideRequestScreen extends ConsumerStatefulWidget {
@@ -73,6 +74,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: homeLeadingButton(context),
         title: const Text("Where are you headed?"),
         actions: [
           IconButton(icon: const Icon(Icons.settings), onPressed: () => context.push("/settings")),
