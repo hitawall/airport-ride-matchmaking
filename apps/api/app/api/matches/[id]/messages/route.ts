@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
 import { getDb, chatMessages } from "@airport-ride-matchmaking/db";
 import { chatMessageCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
 import { getPusher, matchChannelName } from "@/lib/pusher";
+
+// Generous enough for real conversation -- this is about stopping
+// brute-force/scripted abuse, not throttling normal chat.
+const MAX_MESSAGES_PER_MINUTE = 30;
+const MAX_MESSAGES_PER_HOUR = 300;
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId(request);
@@ -43,6 +48,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!parsed.success) return jsonError(parsed.error.issues[0].message, 400);
 
   const db = getDb();
+
+  const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const [{ lastMinuteCount, lastHourCount }] = await db
+    .select({
+      lastMinuteCount: sql<number>`count(*) filter (where ${chatMessages.createdAt} >= ${oneMinuteAgo})::int`,
+      lastHourCount: sql<number>`count(*) filter (where ${chatMessages.createdAt} >= ${oneHourAgo})::int`,
+    })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.senderId, userId), gte(chatMessages.createdAt, oneHourAgo)));
+  if (lastMinuteCount >= MAX_MESSAGES_PER_MINUTE || lastHourCount >= MAX_MESSAGES_PER_HOUR) {
+    return jsonError("Too many messages. Try again in a bit.", 429);
+  }
+
   const [message] = await db
     .insert(chatMessages)
     .values({ matchId: id, senderId: userId, body: parsed.data.body })
