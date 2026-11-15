@@ -78,7 +78,7 @@ export const rideRequests = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
-    flightNumber: text("flight_number").notNull(),
+    flightNumber: text("flight_number"),
     flightArrivalAt: timestamp("flight_arrival_at", { withTimezone: true }).notNull(),
     arrivalWindowStart: timestamp("arrival_window_start", { withTimezone: true }).notNull(),
     arrivalWindowEnd: timestamp("arrival_window_end", { withTimezone: true }).notNull(),

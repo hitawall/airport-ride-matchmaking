@@ -1,0 +1,1 @@
+ALTER TABLE "ride_requests" ALTER COLUMN "flight_number" DROP NOT NULL;

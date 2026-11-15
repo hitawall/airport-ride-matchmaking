@@ -35,21 +35,21 @@ class RideRequest {
   RideRequest({
     required this.id,
     required this.status,
-    required this.flightNumber,
+    this.flightNumber,
     required this.flightArrivalAt,
     required this.destinationLocalityLabel,
   });
 
   final String id;
   final String status;
-  final String flightNumber;
+  final String? flightNumber;
   final DateTime flightArrivalAt;
   final String destinationLocalityLabel;
 
   factory RideRequest.fromJson(Map<String, dynamic> json) => RideRequest(
     id: json["id"] as String,
     status: json["status"] as String,
-    flightNumber: json["flightNumber"] as String,
+    flightNumber: json["flightNumber"] as String?,
     flightArrivalAt: DateTime.parse(json["flightArrivalAt"] as String),
     destinationLocalityLabel: json["destinationLocalityLabel"] as String,
   );
