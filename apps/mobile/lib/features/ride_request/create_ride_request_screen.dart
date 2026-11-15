@@ -20,6 +20,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   DateTime? _arrivalAt;
   bool _loading = false;
   String? _error;
+  bool _missingPhoto = false;
 
   Future<void> _pickArrivalTime() async {
     final now = DateTime.now();
@@ -64,6 +65,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     setState(() {
       _loading = true;
       _error = null;
+      _missingPhoto = false;
     });
     try {
       final api = ref.read(apiClientProvider);
@@ -79,7 +81,10 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
       if (!mounted) return;
       context.go("/awaiting-match/${result["id"]}");
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() {
+        _error = e.message;
+        _missingPhoto = e.statusCode == 403;
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -181,6 +186,14 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (_missingPhoto) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => context.push("/profile-setup"),
+                icon: const Icon(Icons.add_a_photo_outlined),
+                label: const Text("Add profile photo"),
+              ),
+            ],
           ],
           const SizedBox(height: 24),
           FilledButton(

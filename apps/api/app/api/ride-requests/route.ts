@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
+import { getDb, profiles, rideRequests } from "@airport-ride-matchmaking/db";
 import { rideRequestCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { computeH3Cells } from "@/lib/h3";
@@ -17,6 +17,19 @@ export async function POST(request: Request) {
   const data = parsed.data;
 
   const db = getDb();
+
+  const [profile] = await db
+    .select({ profilePhotoUrl: profiles.profilePhotoUrl })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  if (!profile?.profilePhotoUrl) {
+    return jsonError(
+      "Add a profile photo before searching for a match -- it helps your match recognize you at pickup.",
+      403,
+    );
+  }
+
   const [existingOpen] = await db
     .select()
     .from(rideRequests)
