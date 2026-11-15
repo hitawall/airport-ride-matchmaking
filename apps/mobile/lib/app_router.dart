@@ -13,6 +13,7 @@ import "features/onboarding/otp_verify_screen.dart";
 import "features/profile/profile_setup_screen.dart";
 import "features/ride_request/awaiting_match_screen.dart";
 import "features/ride_request/create_ride_request_screen.dart";
+import "features/ride_request/scan_boarding_pass_screen.dart";
 import "features/settings/settings_screen.dart";
 
 const _publicPaths = {"/", "/email", "/otp"};
@@ -46,6 +47,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: "/home", builder: (context, state) => const HomeScreen()),
       GoRoute(path: "/profile-setup", builder: (context, state) => const ProfileSetupScreen()),
       GoRoute(path: "/create-ride", builder: (context, state) => const CreateRideRequestScreen()),
+      GoRoute(
+        path: "/scan-boarding-pass",
+        builder: (context, state) => const ScanBoardingPassScreen(),
+      ),
       GoRoute(
         path: "/awaiting-match/:id",
         builder: (context, state) => AwaitingMatchScreen(rideRequestId: state.pathParameters["id"]!),
