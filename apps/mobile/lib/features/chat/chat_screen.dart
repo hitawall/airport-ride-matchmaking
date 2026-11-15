@@ -4,6 +4,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/pusher_client.dart";
 import "../../data/models.dart";
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _inputController = TextEditingController();
   Timer? _pollTimer;
   String? _counterpartUserId;
+  late final String _channelName = "match-${widget.matchId}";
 
   @override
   void initState() {
@@ -27,12 +29,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _loadCounterpart();
     _poll(initial: true);
     _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) => _poll());
+    PusherClientService.instance.addHandler(_onPusherEvent);
+    PusherClientService.instance.subscribe(_channelName);
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    PusherClientService.instance.removeHandler(_onPusherEvent);
+    PusherClientService.instance.unsubscribe(_channelName);
     super.dispose();
+  }
+
+  void _onPusherEvent(String channelName, String eventName, Map<String, dynamic> data) {
+    if (channelName != _channelName || eventName != "new-message" || !mounted) return;
+    final message = ChatMessage.fromJson(data);
+    if (_messages.any((m) => m.id == message.id)) return;
+    setState(() => _messages.add(message));
   }
 
   Future<void> _loadCounterpart() async {

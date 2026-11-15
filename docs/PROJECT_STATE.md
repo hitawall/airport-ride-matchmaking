@@ -25,7 +25,7 @@ Everything in the original [MVP_PLAN.md](./MVP_PLAN.md) milestone list is built,
 - Full DB schema (8 tables) migrated against Neon/PostGIS
 - Email OTP auth (JWT sessions), profile CRUD + photo upload (Vercel Blob)
 - Matching algorithm: H3 k=1 neighbor adjacency + arrival-time window overlap + **symmetric** gender-preference filter + block exclusion, like/pass with first-mutual-wins
-- Chat (polling-based) between mutual matches, reports/blocks
+- Chat between mutual matches (realtime via Pusher, polling fallback), reports/blocks
 - Full Flutter app screens (onboarding → chat)
 - Deployed to Vercel (API + static web build)
 - `OTP_TEST_MODE` bypass added so the app is testable with zero email-provider cost (see below)
@@ -40,25 +40,23 @@ Everything in the original [MVP_PLAN.md](./MVP_PLAN.md) milestone list is built,
 - Like/pass buttons now show immediate confirmation (SnackBar) — the backend was always working (verified via Vercel logs, zero failed requests); the bug was purely missing UI feedback
 - Swipe-left/swipe-right gestures added to match review, with card tilt/rotation, LIKE/PASS stamp overlays, and synced button-highlight animation; buttons remain fully functional as a fallback
 
+**Real integrations wired in with user-provided credentials (issues #24, #23)**
+- Real email OTP delivery via Resend (`OTP_TEST_MODE=false` in production) — see "How OTP works right now" below
+- Realtime chat push via Pusher Channels (`pusher_channels_flutter` on the client, subscribing to `match-{id}`) — polling kept as a redundant fallback in case the socket connection drops
+
 ### How OTP works right now (important)
 
 Auth switched from phone+SMS (MSG91) to **email OTP via Resend**, with a swappable `OtpChannel` strategy interface (`apps/api/lib/otp/`) so other channels (e.g. WhatsApp) can be added later without touching the auth routes. Phone number is still collected on the profile-setup screen, but only for reporting — it's format-checked, never verified, and never used for login.
 
-`OTP_TEST_MODE=true` is set on the production API. This means:
-- `POST /api/auth/otp/send` does **not** call a real email provider
-- `POST /api/auth/otp/verify` accepts the fixed code **`000000`** for *any* email address
-
-This is intentional for trial testing (see issue #13) — it lets anyone test the full app today with zero cost and zero third-party account setup. **This must be turned off (`OTP_TEST_MODE=false` or unset) before any real, untrusted users are invited**, once real `RESEND_API_KEY`/`OTP_FROM_EMAIL` credentials are wired in (see Blocked below).
+`OTP_TEST_MODE=false` is set on the production API — real signups get a real email with a random code. (Set it back to `true` only for cost-free local/demo testing; `POST /api/auth/otp/verify` then accepts the fixed code `000000` for any email.)
 
 ### Blocked / open — needs your input, not urgent
 
-Three integrations are deliberately deferred because they need credentials only you can provide. None of them block testing today; each has a working interim substitute. Tracked as open GitHub issues:
+Two integrations are deliberately deferred because they need credentials only you can provide. Neither blocks testing today; each has a working interim substitute. Tracked as open GitHub issues:
 
 | Issue | What | Interim substitute | What's needed from you |
 |---|---|---|---|
-| [#24](https://github.com/hitawall/airport-ride-matchmaking/issues/24) | Real email OTP delivery | `OTP_TEST_MODE` (see above) | Resend account, verified sending domain, `RESEND_API_KEY`, `OTP_FROM_EMAIL` |
 | [#22](https://github.com/hitawall/airport-ride-matchmaking/issues/22) | Live Google Places autocomplete + map pin preview | Curated 15-locality dropdown (`apps/mobile/lib/data/bengaluru_localities.dart`) — works fine, no key needed | Google Cloud project, Maps JS/Places/Geocoding APIs enabled, billing, `GOOGLE_MAPS_API_KEY` |
-| [#23](https://github.com/hitawall/airport-ride-matchmaking/issues/23) | Realtime push for chat/match updates | Polling (8–12s intervals) — works fine | Pusher account, `PUSHER_APP_ID`/`PUSHER_KEY`/`PUSHER_SECRET`/`PUSHER_CLUSTER` |
 | [#43](https://github.com/hitawall/airport-ride-matchmaking/issues/43) | Google OAuth sign-in (alternative to email OTP) | Email OTP (see above) — works fine on its own | Google Cloud project + OAuth Client ID |
 
 When you're ready for any of these, just say so in a new session (or this one) with the credentials and I'll wire them in.
