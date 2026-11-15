@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { getDb, matches } from "@airport-ride-matchmaking/db";
+import { and, eq, inArray } from "drizzle-orm";
+import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
 
@@ -21,6 +21,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .set({ status: "unmatched", updatedAt: new Date() })
     .where(eq(matches.id, id))
     .returning();
+
+  // Free up both sides' ride requests -- otherwise they're stuck at
+  // "matched" forever with no mutual match to point to, and the home
+  // screen has no way back into the matching queue.
+  await db
+    .update(rideRequests)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(
+      and(
+        inArray(rideRequests.id, [match.rideRequestAId, match.rideRequestBId]),
+        eq(rideRequests.status, "matched"),
+      ),
+    );
 
   return NextResponse.json(updated);
 }

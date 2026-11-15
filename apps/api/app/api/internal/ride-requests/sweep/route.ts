@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError } from "@/lib/api-response";
 import { env } from "@/lib/env";
@@ -33,8 +33,25 @@ export async function POST(request: Request) {
       AND m.ride_request_b_id = rb.id
       AND m.status = 'mutual'
       AND GREATEST(ra.arrival_window_end, rb.arrival_window_end) < ${matchCutoff.toISOString()}
-    RETURNING m.id
+    RETURNING m.id, m.ride_request_a_id, m.ride_request_b_id
   `);
+
+  // The sweep above only ever expires "open" ride requests -- once matched,
+  // a ride request would otherwise stay stuck at "matched" forever with no
+  // mutual match left to point to, leaving the rider with no way back into
+  // the queue. Free up both sides whenever their match just expired.
+  const expiredRideRequestIds = expiredMatches.rows.flatMap((row) => [
+    row.ride_request_a_id as string,
+    row.ride_request_b_id as string,
+  ]);
+  if (expiredRideRequestIds.length > 0) {
+    await db
+      .update(rideRequests)
+      .set({ status: "expired", updatedAt: new Date() })
+      .where(
+        and(inArray(rideRequests.id, expiredRideRequestIds), eq(rideRequests.status, "matched")),
+      );
+  }
 
   return NextResponse.json({
     expiredCount: expired.length,
