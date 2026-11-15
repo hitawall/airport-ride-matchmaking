@@ -16,6 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const mineResult = await db.execute<{
     id: string;
     user_id: string;
+    status: string;
     h3_cell_res7: string;
     h3_cell_res8: string;
     flight_arrival_at: string;
@@ -24,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     gender: string;
     gender_preference: string;
   }>(sql`
-    SELECT rr.id, rr.user_id, rr.h3_cell_res7, rr.h3_cell_res8, rr.flight_arrival_at,
+    SELECT rr.id, rr.user_id, rr.status, rr.h3_cell_res7, rr.h3_cell_res8, rr.flight_arrival_at,
            rr.arrival_window_start, rr.arrival_window_end, p.gender, p.gender_preference
     FROM ride_requests rr
     JOIN profiles p ON p.user_id = rr.user_id
@@ -33,6 +34,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   `);
   const mine = mineResult.rows[0];
   if (!mine) return jsonError("Ride request not found", 404);
+
+  // Not open anymore (expired/cancelled/matched) -- nothing to search for. Tell
+  // the caller explicitly so the UI can stop polling instead of showing an
+  // indefinite "no match yet" for a request that's no longer active.
+  if (mine.status !== "open") {
+    return NextResponse.json({ candidates: [], rideRequestStatus: mine.status });
+  }
 
   // h3 cell IDs are hex strings (no special chars), safe to inline as a Postgres array literal.
   const neighborCellsLiteral = `{${neighborRes7Cells(mine.h3_cell_res7).join(",")}}`;
@@ -57,10 +65,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       AND (p.gender_preference != 'same_gender_only' OR p.gender = ${mine.gender})
       AND NOT EXISTS (
         SELECT 1 FROM matches m
-        WHERE m.status = 'rejected'
-          AND (
+        WHERE (
             (m.ride_request_a_id = ${mine.id} AND m.ride_request_b_id = rr.id)
             OR (m.ride_request_a_id = rr.id AND m.ride_request_b_id = ${mine.id})
+          )
+          AND (
+            -- Either side already passed: this pair is permanently done.
+            m.status = 'rejected'
+            -- I'm the one who already proposed (liked) this exact candidate --
+            -- whoever proposes first always ends up as ride_request_a_id, so
+            -- this is true only when *I* made the first move, not when they
+            -- liked me and I haven't responded yet (that case should still
+            -- show up so I can respond and get an instant mutual match).
+            OR m.ride_request_a_id = ${mine.id}
           )
       )
     ORDER BY
@@ -69,5 +86,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     LIMIT ${CANDIDATE_LIMIT}
   `);
 
-  return NextResponse.json({ candidates: candidates.rows });
+  return NextResponse.json({ candidates: candidates.rows, rideRequestStatus: mine.status });
 }

@@ -23,6 +23,7 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   final _startedAt = DateTime.now();
   Duration _elapsed = Duration.zero;
   bool _cancelling = false;
+  String? _endedStatus;
 
   @override
   void initState() {
@@ -43,6 +44,21 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
     try {
       final result =
           await api.get("/api/ride-requests/${widget.rideRequestId}/candidates") as Map<String, dynamic>;
+
+      final status = result["rideRequestStatus"] as String?;
+      if (status != null && status != "open") {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        if (status == "matched") {
+          // Matched via another path (e.g. another device/tab) -- send them
+          // to Home, which already knows how to route into the active chat.
+          context.go("/home");
+        } else {
+          setState(() => _endedStatus = status);
+        }
+        return;
+      }
+
       final candidates = (result["candidates"] as List)
           .map((c) => Candidate.fromJson(c as Map<String, dynamic>))
           .toList();
@@ -74,6 +90,48 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_endedStatus != null) {
+      return Scaffold(
+        appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Finding you a match")),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _endedStatus == "cancelled" ? Icons.cancel_outlined : Icons.timer_off_outlined,
+                size: 56,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _endedStatus == "cancelled"
+                    ? "This request was cancelled"
+                    : "This request has expired",
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _endedStatus == "cancelled"
+                    ? "You (or another session) cancelled this ride request. Start a new one "
+                          "whenever you're ready to look for a match again."
+                    : "Nobody matched within the arrival window, so this request stopped "
+                          "searching. Create a new one with an updated arrival time.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => context.go("/create-ride"),
+                child: const Text("Create a new request"),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Finding you a match")),
       body: Padding(
