@@ -12,20 +12,26 @@ class EmailEntryScreen extends ConsumerStatefulWidget {
 }
 
 class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
-  final _controller = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _loading = false;
-  String? _error;
+  String? _emailError;
+  String? _phoneError;
 
   Future<void> _submit() async {
-    final email = _controller.text.trim();
-    if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").hasMatch(email)) {
-      setState(() => _error = "Enter a valid email address");
-      return;
-    }
+    final email = _emailController.text.trim();
+    final phoneNumber = _phoneController.text.trim();
     setState(() {
-      _loading = true;
-      _error = null;
+      _emailError = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").hasMatch(email)
+          ? null
+          : "Enter a valid email address";
+      _phoneError = RegExp(r"^\+?\d{8,15}$").hasMatch(phoneNumber)
+          ? null
+          : "Enter a valid phone number";
     });
+    if (_emailError != null || _phoneError != null) return;
+
+    setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
       final result = await api.post("/api/auth/otp/send", {"email": email});
@@ -34,12 +40,13 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
         "/otp",
         extra: {
           "email": email,
+          "phoneNumber": phoneNumber,
           "requestId": result["requestId"],
           "testMode": result["testMode"] == true,
         },
       );
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _emailError = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -48,21 +55,36 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Enter your email")),
+      appBar: AppBar(title: const Text("Sign up")),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("We'll email you a one-time code to verify it's you."),
+            const Text(
+              "You'll get your one-time verification code by email -- we never call or "
+              "text your phone number. We still ask for it so your match can reach you.",
+            ),
             const SizedBox(height: 16),
             TextField(
-              controller: _controller,
+              controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
-                errorText: _error,
+                errorText: _emailError,
                 labelText: "Email address",
+                helperText: "Your verification code is sent here",
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                errorText: _phoneError,
+                labelText: "Phone number",
+                helperText: "For your match to reach you -- not used to sign you in",
               ),
             ),
             const SizedBox(height: 24),

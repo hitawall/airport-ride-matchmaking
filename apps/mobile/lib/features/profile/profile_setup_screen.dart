@@ -14,7 +14,9 @@ const _genders = {
 };
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
-  const ProfileSetupScreen({super.key});
+  const ProfileSetupScreen({this.initialPhoneNumber, super.key});
+
+  final String? initialPhoneNumber;
 
   @override
   ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -23,7 +25,7 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
-  final _phoneController = TextEditingController();
+  late final _phoneController = TextEditingController(text: widget.initialPhoneNumber ?? "");
   String _gender = "prefer_not_to_say";
   String _genderPreference = "any";
   String? _existingPhotoUrl;
@@ -32,6 +34,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   bool _loading = false;
   bool _loadingExisting = true;
   String? _error;
+  String? _phoneError;
 
   @override
   void initState() {
@@ -77,6 +80,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       setState(() => _error = "Enter your name");
       return;
     }
+    final phoneNumber = _phoneController.text.trim();
+    final phoneValid = RegExp(r"^\+?\d{8,15}$").hasMatch(phoneNumber);
+    setState(() => _phoneError = phoneValid ? null : "Enter a valid phone number");
+    if (!phoneValid) return;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -95,7 +103,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         "genderPreference": _genderPreference,
         "profilePhotoUrl": photoUrl,
         "bio": _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : null,
-        "phoneNumber": _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
+        "phoneNumber": phoneNumber,
       }..removeWhere((key, value) => value == null);
 
       await api.put("/api/profile/me", body);
@@ -167,10 +175,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: "Phone number (optional)",
-              helperText: "For our records only -- not used to sign you in",
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: "Phone number",
+              errorText: _phoneError,
+              helperText: "For your match to reach you -- not used to sign you in",
+              border: const OutlineInputBorder(),
             ),
           ),
           if (_error != null) ...[

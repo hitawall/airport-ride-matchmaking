@@ -26,7 +26,7 @@ export const profileUpdateSchema = z.object({
   genderPreference: z.enum(["any", "same_gender_only"]),
   homeLocalityLabel: z.string().max(120).optional(),
   bio: z.string().max(280).optional(),
-  phoneNumber: phoneNumberSchema.optional(),
+  phoneNumber: phoneNumberSchema,
 });
 
 export const rideRequestCreateSchema = z.object({
