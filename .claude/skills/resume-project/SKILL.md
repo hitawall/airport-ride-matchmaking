@@ -10,7 +10,7 @@ This project has substantial history that lives in GitHub (issues/PRs), not just
 1. **Read `docs/PROJECT_STATE.md`** — the authoritative, up-to-date snapshot: what's deployed, what's done, what's blocked, and known gotchas. This is more current than your training data or any summary you might otherwise guess at.
 2. **Read `docs/MVP_PLAN.md`** — the original architecture plan and the reasoning behind it (why Flutter over React Native, the legal positioning, the product decisions). It has a header noting where reality has since diverged from the plan — trust PROJECT_STATE.md over this for anything that conflicts.
 3. **Read `CLAUDE.md`** — the git workflow rules for this repo. The short version: every change starts with a GitHub issue, goes on a `feat/issue-N-slug` or `fix/issue-N-slug` branch, opens a PR, waits for CI, then gets squash-merged. **Never push directly to `main`** — this was an explicit, repeated requirement from the project owner earlier in this project's history (see the discussion around issue #15/#16 if you want the full context of why).
-4. **Check open issues**: `gh issue list --state open` — as of the last update to PROJECT_STATE.md, issues #22 (Google Maps), #23 (Pusher), #24 (real MSG91 OTP) are open and blocked on the user providing credentials. Don't start on these unprompted; they need the user's input first.
+4. **Check open issues**: `gh issue list --state open` — as of the last update to PROJECT_STATE.md, issues #22 (Google Maps), #23 (Pusher), #24 (real email OTP via Resend), #43 (Google OAuth sign-in) are open and blocked on the user providing credentials. Don't start on these unprompted; they need the user's input first.
 5. **If the user reports a bug**, check Vercel production logs first (`vercel logs airport-ride-matchmaking-api.vercel.app --environment production`) before assuming where the fault lies — more than once in this project's history, a reported "broken button" turned out to be a backend working perfectly with zero client-side feedback, not a logic bug. Verify before diagnosing.
 6. **If you haven't run `scripts/setup-dev-environment.sh` yet on this machine**, do that first — it checks for required tools (Node, pnpm, Flutter, Vercel CLI, gh CLI), installs dependencies, and links/pulls Vercel env vars.
 
@@ -18,7 +18,7 @@ This project has substantial history that lives in GitHub (issues/PRs), not just
 
 - Live web app: https://airport-ride-matchmaking-web.vercel.app
 - Live API: https://airport-ride-matchmaking-api.vercel.app
-- OTP login works today with **any phone number + code `000000`** (`OTP_TEST_MODE=true` in production — no real SMS provider needed for testing)
+- OTP login works today with **any email address + code `000000`** (`OTP_TEST_MODE=true` in production — no real email provider needed for testing)
 - The Vercel API project must be deployed **from the repo root**, not `apps/api` (breaks the pnpm workspace otherwise) — see PROJECT_STATE.md "Gotchas" for why
 - `flutter build web --wasm` does not work for this project (a dependency isn't WASM-compatible yet) — use plain `flutter build web`
 - Browser-based click automation is unreliable against this app's Flutter-web canvas UI, especially text fields — prefer API-level verification (curl/logs/DB queries) over trying to force UI automation to work

@@ -15,6 +15,20 @@
       "when": 1794494039094,
       "tag": "0001_quiet_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794751081973,
+      "tag": "0002_long_black_crow",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794751236892,
+      "tag": "0003_thick_shocker",
+      "breakpoints": true
     }
   ]
 }

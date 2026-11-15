@@ -7,6 +7,7 @@ class Profile {
     this.profilePhotoUrl,
     this.homeLocalityLabel,
     this.bio,
+    this.phoneNumber,
   });
 
   final String userId;
@@ -16,6 +17,7 @@ class Profile {
   final String? profilePhotoUrl;
   final String? homeLocalityLabel;
   final String? bio;
+  final String? phoneNumber;
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
     userId: json["userId"] as String,
@@ -25,6 +27,7 @@ class Profile {
     profilePhotoUrl: json["profilePhotoUrl"] as String?,
     homeLocalityLabel: json["homeLocalityLabel"] as String?,
     bio: json["bio"] as String?,
+    phoneNumber: json["phoneNumber"] as String?,
   );
 }
 

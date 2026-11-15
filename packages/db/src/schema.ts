@@ -15,8 +15,11 @@ import {
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  phone: text("phone").notNull().unique(),
-  phoneVerified: boolean("phone_verified").notNull().default(false),
+  // The identity + OTP channel. Nullable at the DB level only so existing
+  // phone-identified rows don't break this migration; the app always
+  // requires it for new signups.
+  email: text("email").unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -33,6 +36,9 @@ export const profiles = pgTable(
     profilePhotoUrl: text("profile_photo_url"),
     homeLocalityLabel: text("home_locality_label"),
     bio: text("bio"),
+    // Recorded for reporting only -- never used for auth or OTP delivery, so
+    // only format-validated at the API layer, never verified.
+    phoneNumber: text("phone_number"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -48,8 +54,17 @@ export const profiles = pgTable(
 
 export const otpRequests = pgTable("otp_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
-  phone: text("phone").notNull(),
-  msg91RequestId: text("msg91_request_id").notNull(),
+  // Nullable at the DB level only so pre-migration rows (keyed by the old
+  // phone/msg91_request_id columns, now dropped) don't violate a NOT NULL
+  // constraint -- the app always populates these for every new row.
+  email: text("email"),
+  // Our own correlation token handed to the client and echoed back on
+  // verify -- not provided by the delivery channel (channels are swappable
+  // via OtpChannel, so this can't depend on any one provider's response shape).
+  requestId: text("request_id"),
+  // Plaintext, short TTL (5 min) + rate-limited sends -- consistent with
+  // this app's other secrets-at-rest tradeoffs (see otp_test_mode).
+  code: text("code"),
   attemptCount: integer("attempt_count").notNull().default(0),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

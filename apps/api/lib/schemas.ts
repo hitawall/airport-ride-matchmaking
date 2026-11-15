@@ -1,19 +1,24 @@
 import { z } from "zod";
 
-// Indian mobile numbers, normalized to +91XXXXXXXXXX before any DB/MSG91 call.
-export const phoneSchema = z
-  .string()
-  .regex(/^\+91[6-9]\d{9}$/, "Phone must be in +91XXXXXXXXXX format");
+export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address");
 
 export const otpSendSchema = z.object({
-  phone: phoneSchema,
+  email: emailSchema,
 });
 
 export const otpVerifySchema = z.object({
-  phone: phoneSchema,
+  email: emailSchema,
   requestId: z.string().min(1),
   code: z.string().min(4).max(8),
 });
+
+// Loose, intentionally permissive -- this is recorded for reporting only,
+// never verified or used for auth, so it just needs to look like a phone
+// number (digits, optional leading +, 8-15 digits).
+export const phoneNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^\+?\d{8,15}$/, "Enter a valid phone number");
 
 export const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(80),
@@ -21,6 +26,7 @@ export const profileUpdateSchema = z.object({
   genderPreference: z.enum(["any", "same_gender_only"]),
   homeLocalityLabel: z.string().max(120).optional(),
   bio: z.string().max(280).optional(),
+  phoneNumber: phoneNumberSchema.optional(),
 });
 
 export const rideRequestCreateSchema = z.object({

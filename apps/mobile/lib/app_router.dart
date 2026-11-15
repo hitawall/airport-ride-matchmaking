@@ -8,14 +8,14 @@ import "features/matching/match_review_screen.dart";
 import "features/matching/mutual_match_screen.dart";
 import "features/onboarding/home_screen.dart";
 import "features/onboarding/legal_interstitial_screen.dart";
+import "features/onboarding/email_entry_screen.dart";
 import "features/onboarding/otp_verify_screen.dart";
-import "features/onboarding/phone_entry_screen.dart";
 import "features/profile/profile_setup_screen.dart";
 import "features/ride_request/awaiting_match_screen.dart";
 import "features/ride_request/create_ride_request_screen.dart";
 import "features/settings/settings_screen.dart";
 
-const _publicPaths = {"/", "/phone", "/otp"};
+const _publicPaths = {"/", "/email", "/otp"};
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authControllerProvider);
@@ -31,13 +31,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: "/", builder: (context, state) => const LegalInterstitialScreen()),
-      GoRoute(path: "/phone", builder: (context, state) => const PhoneEntryScreen()),
+      GoRoute(path: "/email", builder: (context, state) => const EmailEntryScreen()),
       GoRoute(
         path: "/otp",
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return OtpVerifyScreen(
-            phone: extra["phone"] as String,
+            email: extra["email"] as String,
             requestId: extra["requestId"] as String,
             testMode: extra["testMode"] as bool? ?? false,
           );

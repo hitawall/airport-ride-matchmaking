@@ -16,19 +16,19 @@ Database: Neon Postgres, provisioned via the Vercel Marketplace integration, Pos
 
 ## Current status: MVP is feature-complete and testable today
 
-Everything in the original [MVP_PLAN.md](./MVP_PLAN.md) milestone list is built, plus a round of fixes/polish from live user testing. You can log in (phone + OTP) and use the full flow: onboarding → profile → create ride request → match → chat, right now, with **zero paid third-party accounts** (see "How OTP works right now" below).
+Everything in the original [MVP_PLAN.md](./MVP_PLAN.md) milestone list is built, plus a round of fixes/polish from live user testing. You can log in (email + OTP) and use the full flow: onboarding → profile → create ride request → match → chat, right now, with **zero paid third-party accounts** (see "How OTP works right now" below).
 
 ### Done (all merged to `main`, chronological)
 
 **Foundation (issues #1, #3, #5, #7, #9, #11, #13)**
 - Monorepo: pnpm/Turborepo workspace (`apps/api` Next.js + `packages/db` Drizzle) + a separate Flutter project (`apps/mobile`, not part of the pnpm workspace — Dart/TS don't share a type system)
 - Full DB schema (8 tables) migrated against Neon/PostGIS
-- Phone OTP auth (JWT sessions), profile CRUD + photo upload (Vercel Blob)
+- Email OTP auth (JWT sessions), profile CRUD + photo upload (Vercel Blob)
 - Matching algorithm: H3 k=1 neighbor adjacency + arrival-time window overlap + **symmetric** gender-preference filter + block exclusion, like/pass with first-mutual-wins
 - Chat (polling-based) between mutual matches, reports/blocks
 - Full Flutter app screens (onboarding → chat)
 - Deployed to Vercel (API + static web build)
-- `OTP_TEST_MODE` bypass added so the app is testable with zero SMS-provider cost (see below)
+- `OTP_TEST_MODE` bypass added so the app is testable with zero email-provider cost (see below)
 
 **Post-launch fixes from live testing (issues #15, #17–#21, #29, #31)**
 - Fixed a CORS bug (`PUT` was missing from `Access-Control-Allow-Methods`) that silently blocked profile saves
@@ -42,11 +42,13 @@ Everything in the original [MVP_PLAN.md](./MVP_PLAN.md) milestone list is built,
 
 ### How OTP works right now (important)
 
-`OTP_TEST_MODE=true` is set on the production API. This means:
-- `POST /api/auth/otp/send` does **not** call a real SMS provider
-- `POST /api/auth/otp/verify` accepts the fixed code **`000000`** for *any* phone number
+Auth switched from phone+SMS (MSG91) to **email OTP via Resend**, with a swappable `OtpChannel` strategy interface (`apps/api/lib/otp/`) so other channels (e.g. WhatsApp) can be added later without touching the auth routes. Phone number is still collected on the profile-setup screen, but only for reporting — it's format-checked, never verified, and never used for login.
 
-This is intentional for trial testing (see issue #13) — it lets anyone test the full app today with zero cost and zero third-party account setup. **This must be turned off (`OTP_TEST_MODE=false` or unset) before any real, untrusted users are invited**, once real MSG91 credentials are wired in (see Blocked below).
+`OTP_TEST_MODE=true` is set on the production API. This means:
+- `POST /api/auth/otp/send` does **not** call a real email provider
+- `POST /api/auth/otp/verify` accepts the fixed code **`000000`** for *any* email address
+
+This is intentional for trial testing (see issue #13) — it lets anyone test the full app today with zero cost and zero third-party account setup. **This must be turned off (`OTP_TEST_MODE=false` or unset) before any real, untrusted users are invited**, once real `RESEND_API_KEY`/`OTP_FROM_EMAIL` credentials are wired in (see Blocked below).
 
 ### Blocked / open — needs your input, not urgent
 
@@ -54,9 +56,10 @@ Three integrations are deliberately deferred because they need credentials only 
 
 | Issue | What | Interim substitute | What's needed from you |
 |---|---|---|---|
-| [#24](https://github.com/hitawall/airport-ride-matchmaking/issues/24) | Real MSG91 OTP delivery | `OTP_TEST_MODE` (see above) | MSG91 account, `MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID` (DLT template registration can take hours–days, start early) |
+| [#24](https://github.com/hitawall/airport-ride-matchmaking/issues/24) | Real email OTP delivery | `OTP_TEST_MODE` (see above) | Resend account, verified sending domain, `RESEND_API_KEY`, `OTP_FROM_EMAIL` |
 | [#22](https://github.com/hitawall/airport-ride-matchmaking/issues/22) | Live Google Places autocomplete + map pin preview | Curated 15-locality dropdown (`apps/mobile/lib/data/bengaluru_localities.dart`) — works fine, no key needed | Google Cloud project, Maps JS/Places/Geocoding APIs enabled, billing, `GOOGLE_MAPS_API_KEY` |
 | [#23](https://github.com/hitawall/airport-ride-matchmaking/issues/23) | Realtime push for chat/match updates | Polling (8–12s intervals) — works fine | Pusher account, `PUSHER_APP_ID`/`PUSHER_KEY`/`PUSHER_SECRET`/`PUSHER_CLUSTER` |
+| [#43](https://github.com/hitawall/airport-ride-matchmaking/issues/43) | Google OAuth sign-in (alternative to email OTP) | Email OTP (see above) — works fine on its own | Google Cloud project + OAuth Client ID |
 
 When you're ready for any of these, just say so in a new session (or this one) with the credentials and I'll wire them in.
 

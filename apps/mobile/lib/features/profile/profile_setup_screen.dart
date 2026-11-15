@@ -23,6 +23,7 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
+  final _phoneController = TextEditingController();
   String _gender = "prefer_not_to_say";
   String _genderPreference = "any";
   String? _existingPhotoUrl;
@@ -48,6 +49,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _gender = profile["gender"] as String? ?? _gender;
         _genderPreference = profile["genderPreference"] as String? ?? _genderPreference;
         _bioController.text = profile["bio"] as String? ?? "";
+        _phoneController.text = profile["phoneNumber"] as String? ?? "";
         _existingPhotoUrl = profile["profilePhotoUrl"] as String?;
       });
     } on ApiException catch (e) {
@@ -93,6 +95,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         "genderPreference": _genderPreference,
         "profilePhotoUrl": photoUrl,
         "bio": _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : null,
+        "phoneNumber": _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
       }..removeWhere((key, value) => value == null);
 
       await api.put("/api/profile/me", body);
@@ -159,6 +162,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             maxLength: 280,
             maxLines: 3,
             decoration: const InputDecoration(labelText: "Bio (optional)", border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: "Phone number (optional)",
+              helperText: "For our records only -- not used to sign you in",
+              border: OutlineInputBorder(),
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
