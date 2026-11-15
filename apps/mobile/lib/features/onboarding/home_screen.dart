@@ -90,25 +90,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 setState(() => _loading = true);
                 return _load();
               },
-              child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  Text(
-                    _displayName != null ? "Hi, $_displayName" : "Welcome",
-                    style: Theme.of(context).textTheme.headlineSmall,
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 36,
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          child: Icon(
+                            Icons.flight_takeoff,
+                            size: 36,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _displayName != null ? "Hi, $_displayName" : "Welcome",
+                          style: Theme.of(context).textTheme.headlineSmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Let's get you a ride buddy for the trip out of the airport.",
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 28),
+                        if (_error != null) ...[
+                          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                          const SizedBox(height: 16),
+                        ],
+                        _buildStatusCard(context),
+                        const SizedBox(height: 16),
+                        _HomeTile(
+                          icon: Icons.favorite_outline,
+                          iconBackground: Theme.of(context).colorScheme.tertiaryContainer,
+                          iconColor: Theme.of(context).colorScheme.onTertiaryContainer,
+                          title: "My matches",
+                          subtitle: "Active chats and past matches",
+                          onTap: () => context.push("/matches"),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  if (_error != null)
-                    Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                  _buildStatusCard(context),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: const Icon(Icons.favorite_outline),
-                    title: const Text("My matches"),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push("/matches"),
-                  ),
-                ],
+                ),
               ),
             ),
     );
@@ -117,41 +146,105 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildStatusCard(BuildContext context) {
     switch (_rideRequestStatus) {
       case "open":
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.hourglass_top),
-            title: const Text("Looking for your match"),
-            subtitle: const Text("We're checking for travelers heading your way."),
-            trailing: FilledButton(
-              onPressed: () => context.go("/awaiting-match/$_rideRequestId"),
-              child: const Text("Check status"),
-            ),
-          ),
+        return _HomeTile(
+          icon: Icons.hourglass_top,
+          iconBackground: Theme.of(context).colorScheme.secondaryContainer,
+          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
+          title: "Looking for your match",
+          subtitle: "We're checking for travelers heading your way",
+          trailingLabel: "Check status",
+          onTap: () => context.go("/awaiting-match/$_rideRequestId"),
         );
       case "matched":
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.celebration_outlined),
-            title: const Text("You have a match!"),
-            subtitle: const Text("Coordinate meeting at the pickup zone."),
-            trailing: FilledButton(
-              onPressed: _activeMatchId == null ? null : () => context.go("/chat/$_activeMatchId"),
-              child: const Text("Open chat"),
-            ),
-          ),
+        return _HomeTile(
+          icon: Icons.celebration_outlined,
+          iconBackground: Theme.of(context).colorScheme.primaryContainer,
+          iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          title: "You have a match!",
+          subtitle: "Coordinate meeting at the pickup zone",
+          trailingLabel: "Open chat",
+          onTap: _activeMatchId == null ? null : () => context.go("/chat/$_activeMatchId"),
         );
       default:
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.flight_land),
-            title: const Text("Ready to find a ride partner?"),
-            subtitle: const Text("Tell us your flight and destination."),
-            trailing: FilledButton(
-              onPressed: () => context.go("/create-ride"),
-              child: const Text("Start"),
-            ),
-          ),
+        return _HomeTile(
+          icon: Icons.flight_land,
+          iconBackground: Theme.of(context).colorScheme.secondaryContainer,
+          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
+          title: "Ready to find a ride partner?",
+          subtitle: "Tell us your flight and destination",
+          trailingLabel: "Start",
+          onTap: () => context.go("/create-ride"),
         );
     }
+  }
+}
+
+/// A rounded, icon-led card used throughout the home screen for status and
+/// quick-action entries -- gives the screen a consistent "modern tile" feel
+/// instead of plain ListTiles.
+class _HomeTile extends StatelessWidget {
+  const _HomeTile({
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    this.trailingLabel,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final String? trailingLabel;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: iconBackground,
+                child: Icon(icon, color: iconColor),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailingLabel != null)
+                FilledButton(
+                  onPressed: onTap,
+                  child: Text(trailingLabel!),
+                )
+              else
+                const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

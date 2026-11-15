@@ -8,6 +8,15 @@ import "../../core/home_leading_button.dart";
 import "../../data/models.dart";
 
 const _pollInterval = Duration(seconds: 12);
+const _quipInterval = Duration(seconds: 6);
+
+const _waitingQuips = [
+  "Scanning the terminal for your ride buddy...",
+  "Checking who else just touched down nearby...",
+  "Good carpools are worth the wait.",
+  "Somewhere out there, someone's luggage just hit the belt.",
+  "Still looking -- the airport is bigger than it feels right now.",
+];
 
 class AwaitingMatchScreen extends ConsumerStatefulWidget {
   const AwaitingMatchScreen({required this.rideRequestId, super.key});
@@ -20,8 +29,11 @@ class AwaitingMatchScreen extends ConsumerStatefulWidget {
 
 class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   Timer? _pollTimer;
+  Timer? _quipTimer;
+  Timer? _tickTimer;
   final _startedAt = DateTime.now();
   Duration _elapsed = Duration.zero;
+  int _quipIndex = 0;
   bool _cancelling = false;
   String? _endedStatus;
 
@@ -30,17 +42,26 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
     super.initState();
     _poll();
     _pollTimer = Timer.periodic(_pollInterval, (_) => _poll());
+    _quipTimer = Timer.periodic(
+      _quipInterval,
+      (_) => setState(() => _quipIndex = (_quipIndex + 1) % _waitingQuips.length),
+    );
+    _tickTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => setState(() => _elapsed = DateTime.now().difference(_startedAt)),
+    );
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _quipTimer?.cancel();
+    _tickTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _poll() async {
     final api = ref.read(apiClientProvider);
-    if (mounted) setState(() => _elapsed = DateTime.now().difference(_startedAt));
     try {
       final result =
           await api.get("/api/ride-requests/${widget.rideRequestId}/candidates") as Map<String, dynamic>;
@@ -102,9 +123,9 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   }
 
   String get _elapsedLabel {
-    final minutes = _elapsed.inMinutes;
-    if (minutes < 1) return "just started";
-    return "$minutes min";
+    final minutes = _elapsed.inMinutes.remainder(60).toString().padLeft(2, "0");
+    final seconds = _elapsed.inSeconds.remainder(60).toString().padLeft(2, "0");
+    return "$minutes:$seconds";
   }
 
   @override
@@ -158,20 +179,47 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
+            SizedBox(
+              height: 96,
+              width: 96,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const SizedBox(height: 96, width: 96, child: CircularProgressIndicator(strokeWidth: 3)),
+                  Text(
+                    _elapsedLabel,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             const Text(
-              "No match yet -- we check every 12 seconds or so.",
+              "Finding your ride buddy",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: Text(
+                _waitingQuips[_quipIndex],
+                key: ValueKey(_quipIndex),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              "Searching for $_elapsedLabel. If you're one of the first people trying "
-              "this out, there may not be anyone to match with yet -- that's expected, "
-              "not a bug. Feel free to head back to Home and check again later.",
+              "Early days -- if you're one of the first people trying this out, there may "
+              "not be anyone to match with yet. That's expected, not a bug.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(height: 32),
             Card(
