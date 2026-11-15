@@ -56,5 +56,5 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter build web --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app
+      - run: flutter build web --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
       - run: npx vercel deploy build/web --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
