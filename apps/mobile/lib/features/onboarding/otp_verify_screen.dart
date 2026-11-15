@@ -8,12 +8,14 @@ class OtpVerifyScreen extends ConsumerStatefulWidget {
   const OtpVerifyScreen({
     required this.email,
     required this.requestId,
+    required this.phoneNumber,
     this.testMode = false,
     super.key,
   });
 
   final String email;
   final String requestId;
+  final String phoneNumber;
   final bool testMode;
 
   @override
@@ -46,7 +48,11 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
           .read(authControllerProvider.notifier)
           .login(result["token"] as String, result["userId"] as String);
       if (!mounted) return;
-      context.go("/home");
+      if (result["isNewUser"] == true) {
+        context.go("/profile-setup", extra: {"phoneNumber": widget.phoneNumber});
+      } else {
+        context.go("/home");
+      }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {

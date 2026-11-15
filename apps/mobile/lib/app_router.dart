@@ -39,12 +39,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return OtpVerifyScreen(
             email: extra["email"] as String,
             requestId: extra["requestId"] as String,
+            phoneNumber: extra["phoneNumber"] as String,
             testMode: extra["testMode"] as bool? ?? false,
           );
         },
       ),
       GoRoute(path: "/home", builder: (context, state) => const HomeScreen()),
-      GoRoute(path: "/profile-setup", builder: (context, state) => const ProfileSetupScreen()),
+      GoRoute(
+        path: "/profile-setup",
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return ProfileSetupScreen(initialPhoneNumber: extra?["phoneNumber"] as String?);
+        },
+      ),
       GoRoute(path: "/create-ride", builder: (context, state) => const CreateRideRequestScreen()),
       GoRoute(
         path: "/awaiting-match/:id",
