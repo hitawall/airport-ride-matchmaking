@@ -6,6 +6,7 @@ import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
 import "../../core/pusher_client.dart";
 import "../../data/models.dart";
+import "../matching/rate_match_dialog.dart";
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({required this.matchId, super.key});
@@ -99,54 +100,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _rate() async {
-    var selected = 5;
-    final score = await showDialog<int>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Rate your match"),
-          content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
-              final star = i + 1;
-              return IconButton(
-                icon: Icon(
-                  star <= selected ? Icons.star : Icons.star_border,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                onPressed: () => setDialogState(() => selected = star),
-              );
-            }),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Cancel")),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(selected),
-              child: const Text("Submit"),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (score == null) return;
-
-    final api = ref.read(apiClientProvider);
-    try {
-      await api.post("/api/matches/${widget.matchId}/rating", {"score": score});
-      if (mounted) {
-        setState(() => _hasRated = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Thanks for rating your match!")),
-        );
-      }
-    } on ApiException catch (e) {
-      if (mounted) {
-        setState(() => _hasRated = true);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
-  }
+  Future<void> _rate() => showRateMatchDialog(
+    context,
+    ref.read(apiClientProvider),
+    widget.matchId,
+    onRated: () {
+      if (mounted) setState(() => _hasRated = true);
+    },
+  );
 
   Future<void> _poll({bool initial = false}) async {
     final api = ref.read(apiClientProvider);
@@ -262,6 +223,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+          if (!_isActive && !_hasRated)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: FilledButton.tonalIcon(
+                onPressed: _rate,
+                icon: const Icon(Icons.star_outline),
+                label: const Text("Rate your match"),
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               reverse: true,

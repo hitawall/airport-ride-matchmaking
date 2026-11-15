@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/auth_controller.dart";
 import "../../data/models.dart";
+import "rate_match_dialog.dart";
 
 class MatchListScreen extends ConsumerWidget {
   const MatchListScreen({super.key});
@@ -65,14 +66,14 @@ class MatchListScreen extends ConsumerWidget {
   }
 }
 
-class _MatchTile extends StatelessWidget {
+class _MatchTile extends ConsumerWidget {
   const _MatchTile({required this.match, required this.active});
 
   final MatchSummary match;
   final bool active;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       leading: CircleAvatar(
         backgroundImage:
@@ -83,7 +84,19 @@ class _MatchTile extends StatelessWidget {
       subtitle: active
           ? null
           : Text(match.status == "unmatched" ? "Unmatched" : "Expired"),
-      trailing: active ? null : const Icon(Icons.chat_bubble_outline, size: 18),
+      trailing: active
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.star_outline, size: 20),
+                  tooltip: "Rate this match",
+                  onPressed: () => showRateMatchDialog(context, ref.read(apiClientProvider), match.id),
+                ),
+                const Icon(Icons.chat_bubble_outline, size: 18),
+              ],
+            ),
       onTap: () => context.go("/chat/${match.id}"),
     );
   }

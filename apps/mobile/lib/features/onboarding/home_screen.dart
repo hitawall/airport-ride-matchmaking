@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../feedback/send_feedback_sheet.dart";
 
 /// The landing screen after login. Shows a welcome summary and the status of
 /// the user's most recent ride request, with an action to match. A missing
@@ -134,6 +135,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           subtitle: "Active chats and past matches",
                           onTap: () => context.push("/matches"),
                         ),
+                        const SizedBox(height: 16),
+                        _FeedbackCallout(
+                          onTap: () =>
+                              showSendFeedbackSheet(context, ref.read(apiClientProvider)),
+                        ),
                       ],
                     ),
                   ),
@@ -176,6 +182,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onTap: () => context.go("/create-ride"),
         );
     }
+  }
+}
+
+const _feedbackQuips = [
+  "Found a bug? Got a wild idea? We want to hear it.",
+  "Tell us what's awkward. We'll pretend we meant to do that.",
+  "Your 30-second rant could become next week's feature.",
+  "Loved it, hated it, confused by it -- spill it below.",
+];
+
+/// A visually distinct callout (not just another tile) so feedback gets
+/// noticed instead of blending into the rest of the home screen.
+class _FeedbackCallout extends StatelessWidget {
+  const _FeedbackCallout({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final quip = _feedbackQuips[DateTime.now().day % _feedbackQuips.length];
+    return Material(
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Text("💬", style: TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Got thoughts? We're all ears",
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      quip,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSecondaryContainer),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
