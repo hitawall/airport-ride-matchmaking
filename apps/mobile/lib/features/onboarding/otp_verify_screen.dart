@@ -8,14 +8,12 @@ class OtpVerifyScreen extends ConsumerStatefulWidget {
   const OtpVerifyScreen({
     required this.email,
     required this.requestId,
-    required this.phoneNumber,
     this.testMode = false,
     super.key,
   });
 
   final String email;
   final String requestId;
-  final String phoneNumber;
   final bool testMode;
 
   @override
@@ -49,7 +47,7 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
           .login(result["token"] as String, result["userId"] as String);
       if (!mounted) return;
       if (result["isNewUser"] == true) {
-        context.go("/profile-setup", extra: {"phoneNumber": widget.phoneNumber});
+        context.go("/profile-setup");
       } else {
         context.go("/home");
       }
@@ -70,6 +68,28 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("We sent a code to ${widget.email}"),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSecondaryContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Your verification code only ever arrives by email -- we never call or "
+                      "text it to your phone number.",
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSecondaryContainer),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             if (widget.testMode) ...[
               const SizedBox(height: 12),
               Container(

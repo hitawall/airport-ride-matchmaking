@@ -47,3 +47,11 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   final auth = ref.watch(authControllerProvider);
   return ApiClient(token: auth.token);
 });
+
+/// Carries the phone number collected on the signup screen through to
+/// profile setup. Deliberately NOT passed via GoRouter's `extra` for that
+/// hop -- `login()` changes auth state, which rebuilds `appRouterProvider`
+/// (it watches `authControllerProvider`) into a brand new `GoRouter`
+/// instance, and that swap can race with and drop an in-flight `.go()`'s
+/// extra. A plain provider isn't affected by the router being recreated.
+final pendingSignupPhoneNumberProvider = StateProvider<String?>((ref) => null);

@@ -36,11 +36,11 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
       final api = ref.read(apiClientProvider);
       final result = await api.post("/api/auth/otp/send", {"email": email});
       if (!mounted) return;
+      ref.read(pendingSignupPhoneNumberProvider.notifier).state = phoneNumber;
       context.push(
         "/otp",
         extra: {
           "email": email,
-          "phoneNumber": phoneNumber,
           "requestId": result["requestId"],
           "testMode": result["testMode"] == true,
         },
@@ -61,11 +61,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "You'll get your one-time verification code by email -- we never call or "
-              "text your phone number. We still ask for it so your match can reach you.",
-            ),
-            const SizedBox(height: 16),
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
@@ -84,7 +79,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
                 border: const OutlineInputBorder(),
                 errorText: _phoneError,
                 labelText: "Phone number",
-                helperText: "For your match to reach you -- not used to sign you in",
+                helperText: "For safety and records only -- never shown to your match",
               ),
             ),
             const SizedBox(height: 24),

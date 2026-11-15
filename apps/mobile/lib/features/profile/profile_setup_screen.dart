@@ -14,9 +14,7 @@ const _genders = {
 };
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
-  const ProfileSetupScreen({this.initialPhoneNumber, super.key});
-
-  final String? initialPhoneNumber;
+  const ProfileSetupScreen({super.key});
 
   @override
   ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -25,7 +23,7 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
-  late final _phoneController = TextEditingController(text: widget.initialPhoneNumber ?? "");
+  final _phoneController = TextEditingController();
   String _gender = "prefer_not_to_say";
   String _genderPreference = "any";
   String? _existingPhotoUrl;
@@ -33,12 +31,17 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String? _photoFilename;
   bool _loading = false;
   bool _loadingExisting = true;
+  // Phone number is already collected (and required) on the signup screen
+  // for brand-new accounts -- no need to ask again here. Existing users
+  // editing their profile via Settings can still see and update it.
+  bool _isNewProfile = true;
   String? _error;
   String? _phoneError;
 
   @override
   void initState() {
     super.initState();
+    _phoneController.text = ref.read(pendingSignupPhoneNumberProvider) ?? "";
     _loadExistingProfile();
   }
 
@@ -54,6 +57,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _bioController.text = profile["bio"] as String? ?? "";
         _phoneController.text = profile["phoneNumber"] as String? ?? "";
         _existingPhotoUrl = profile["profilePhotoUrl"] as String?;
+        _isNewProfile = false;
       });
     } on ApiException catch (e) {
       if (e.statusCode != 404) {
@@ -82,8 +86,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
     final phoneNumber = _phoneController.text.trim();
     final phoneValid = RegExp(r"^\+?\d{8,15}$").hasMatch(phoneNumber);
-    setState(() => _phoneError = phoneValid ? null : "Enter a valid phone number");
-    if (!phoneValid) return;
+    if (_isNewProfile) {
+      if (!phoneValid) {
+        setState(() => _error = "Missing phone number -- please sign up again");
+        return;
+      }
+    } else {
+      setState(() => _phoneError = phoneValid ? null : "Enter a valid phone number");
+      if (!phoneValid) return;
+    }
 
     setState(() {
       _loading = true;
@@ -108,6 +119,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
       await api.put("/api/profile/me", body);
 
+      ref.read(pendingSignupPhoneNumberProvider.notifier).state = null;
       if (!mounted) return;
       context.go("/home");
     } on ApiException catch (e) {
@@ -171,17 +183,19 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             maxLines: 3,
             decoration: const InputDecoration(labelText: "Bio (optional)", border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              labelText: "Phone number",
-              errorText: _phoneError,
-              helperText: "For your match to reach you -- not used to sign you in",
-              border: const OutlineInputBorder(),
+          if (!_isNewProfile) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: "Phone number",
+                errorText: _phoneError,
+                helperText: "For safety and records only -- never shown to your match",
+                border: const OutlineInputBorder(),
+              ),
             ),
-          ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
