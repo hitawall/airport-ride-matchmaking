@@ -208,6 +208,22 @@ export const ratings = pgTable(
   ],
 );
 
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    type: text("type").notNull(),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("feedback_type_check", sql`${table.type} IN ('feature_request','bug_report','general')`),
+  ],
+);
+
 export const blocks = pgTable(
   "blocks",
   {

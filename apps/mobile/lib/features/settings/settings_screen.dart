@@ -30,6 +30,11 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text("Blocked users"),
             onTap: () => _showBlockedUsers(context, api),
           ),
+          ListTile(
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text("Send feedback"),
+            onTap: () => _showSendFeedback(context, api),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
@@ -97,6 +102,79 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
+  }
+
+  void _showSendFeedback(BuildContext context, ApiClient api) {
+    final messageController = TextEditingController();
+    var type = "general";
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setSheetState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Send feedback", style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                decoration: const InputDecoration(labelText: "Type", border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: "feature_request", child: Text("Suggest a feature")),
+                  DropdownMenuItem(value: "bug_report", child: Text("Report a bug")),
+                  DropdownMenuItem(value: "general", child: Text("General feedback")),
+                ],
+                onChanged: (v) => setSheetState(() => type = v!),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                maxLines: 4,
+                maxLength: 2000,
+                decoration: const InputDecoration(
+                  labelText: "Message",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    final message = messageController.text.trim();
+                    if (message.isEmpty) return;
+                    try {
+                      await api.post("/api/feedback", {"type": type, "message": message});
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Thanks for the feedback!")),
+                        );
+                      }
+                    } on ApiException catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text(e.message)));
+                      }
+                    }
+                  },
+                  child: const Text("Submit"),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showBlockedUsers(BuildContext context, ApiClient api) {

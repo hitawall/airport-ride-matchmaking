@@ -69,3 +69,8 @@ export const blockCreateSchema = z.object({
 export const ratingCreateSchema = z.object({
   score: z.number().int().min(1).max(5),
 });
+
+export const feedbackCreateSchema = z.object({
+  type: z.enum(["feature_request", "bug_report", "general"]),
+  message: z.string().min(1).max(2000),
+});
