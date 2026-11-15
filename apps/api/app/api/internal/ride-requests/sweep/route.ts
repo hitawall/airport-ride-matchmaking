@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError } from "@/lib/api-response";
 import { env } from "@/lib/env";
 
 const EXPIRY_GRACE_HOURS = 4;
+// Generous on purpose -- people are often still coordinating logistics
+// (where to meet, splitting a cab) well after the ride window itself ends.
+const MATCH_EXPIRY_GRACE_HOURS = 24;
 
 /** Vercel Cron hits this on a schedule; protected via CRON_SECRET bearer token. */
 export async function POST(request: Request) {
@@ -19,5 +22,22 @@ export async function POST(request: Request) {
     .where(and(eq(rideRequests.status, "open"), lt(rideRequests.arrivalWindowEnd, cutoff)))
     .returning({ id: rideRequests.id });
 
-  return NextResponse.json({ expiredCount: expired.length });
+  // Freeze chat on mutual matches once both sides' ride window has passed --
+  // the mobile chat screen already treats any non-"mutual" status as read-only.
+  const matchCutoff = new Date(Date.now() - MATCH_EXPIRY_GRACE_HOURS * 60 * 60 * 1000);
+  const expiredMatches = await db.execute(sql`
+    UPDATE matches m
+    SET status = 'expired', updated_at = now()
+    FROM ride_requests ra, ride_requests rb
+    WHERE m.ride_request_a_id = ra.id
+      AND m.ride_request_b_id = rb.id
+      AND m.status = 'mutual'
+      AND GREATEST(ra.arrival_window_end, rb.arrival_window_end) < ${matchCutoff.toISOString()}
+    RETURNING m.id
+  `);
+
+  return NextResponse.json({
+    expiredCount: expired.length,
+    expiredMatchCount: expiredMatches.rows.length,
+  });
 }
