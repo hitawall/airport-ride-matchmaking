@@ -21,7 +21,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _inputController = TextEditingController();
   Timer? _pollTimer;
   String? _counterpartUserId;
+  String? _matchStatus;
   late final String _channelName = "match-${widget.matchId}";
+
+  bool get _isActive => _matchStatus == null || _matchStatus == "mutual";
 
   @override
   void initState() {
@@ -54,9 +57,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final match = await api.get("/api/matches/${widget.matchId}") as Map<String, dynamic>;
       final other = match["userAId"] == myUserId ? match["userBId"] : match["userAId"];
-      if (mounted) setState(() => _counterpartUserId = other as String);
+      if (mounted) {
+        setState(() {
+          _counterpartUserId = other as String;
+          _matchStatus = match["status"] as String?;
+        });
+      }
     } on ApiException {
       // non-fatal -- report/block menu just won't work until this resolves
+    }
+  }
+
+  Future<void> _unmatch() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Unmatch?"),
+        content: const Text(
+          "You'll both lose access to this chat going forward. This can't be undone.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Cancel")),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("Unmatch")),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.post("/api/matches/${widget.matchId}/unmatch");
+      if (mounted) setState(() => _matchStatus = "unmatched");
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -92,7 +125,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<void> _reportOrBlock(String action) async {
+  Future<void> _onMenuAction(String action) async {
+    if (action == "unmatch") {
+      await _unmatch();
+      return;
+    }
     if (_counterpartUserId == null) return;
     final api = ref.read(apiClientProvider);
     try {
@@ -125,21 +162,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: const Text("Chat"),
         actions: [
           PopupMenuButton<String>(
-            onSelected: _reportOrBlock,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: "report", child: Text("Report")),
-              PopupMenuItem(value: "block", child: Text("Block")),
+            onSelected: _onMenuAction,
+            itemBuilder: (context) => [
+              if (_isActive) const PopupMenuItem(value: "unmatch", child: Text("Unmatch")),
+              const PopupMenuItem(value: "report", child: Text("Report")),
+              const PopupMenuItem(value: "block", child: Text("Block")),
             ],
           ),
         ],
       ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(8),
+          Padding(
+            padding: const EdgeInsets.all(8),
             child: Text(
-              "Meet at the official airport pickup zone. Verify their photo before you share a cab.",
-              style: TextStyle(fontSize: 12),
+              _isActive
+                  ? "Meet at the official airport pickup zone. Verify their photo before you share a cab."
+                  : "This match has ended -- you can still see your past messages, but can't send new ones.",
+              style: const TextStyle(fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ),
@@ -168,21 +208,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _inputController,
-                    decoration: const InputDecoration(hintText: "Message", border: OutlineInputBorder()),
-                    onSubmitted: (_) => _send(),
+          if (_isActive)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _inputController,
+                      decoration: const InputDecoration(
+                        hintText: "Message",
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _send(),
+                    ),
                   ),
-                ),
-                IconButton(icon: const Icon(Icons.send), onPressed: _send),
-              ],
+                  IconButton(icon: const Icon(Icons.send), onPressed: _send),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

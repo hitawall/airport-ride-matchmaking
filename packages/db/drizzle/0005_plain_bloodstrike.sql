@@ -1,0 +1,2 @@
+ALTER TABLE "matches" DROP CONSTRAINT "match_status_check";--> statement-breakpoint
+ALTER TABLE "matches" ADD CONSTRAINT "match_status_check" CHECK ("matches"."status" IN ('proposed_by_a','proposed_by_b','mutual','rejected','expired','unmatched'));
