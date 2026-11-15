@@ -24,12 +24,15 @@ class MatchListScreen extends ConsumerWidget {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final matches = ((snapshot.data as Map<String, dynamic>)["matches"] as List)
+          final allMatches = ((snapshot.data as Map<String, dynamic>)["matches"] as List)
               .map((m) => MatchSummary.fromJson(m as Map<String, dynamic>))
-              .where((m) => m.status == "mutual")
+              .toList();
+          final active = allMatches.where((m) => m.status == "mutual").toList();
+          final past = allMatches
+              .where((m) => m.status == "unmatched" || m.status == "expired")
               .toList();
 
-          if (matches.isEmpty) {
+          if (active.isEmpty && past.isEmpty) {
             return Center(
               child: TextButton(
                 onPressed: () => context.go("/create-ride"),
@@ -38,23 +41,50 @@ class MatchListScreen extends ConsumerWidget {
             );
           }
 
-          return ListView.builder(
-            itemCount: matches.length,
-            itemBuilder: (context, i) {
-              final m = matches[i];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage:
-                      m.counterpartPhotoUrl != null ? NetworkImage(m.counterpartPhotoUrl!) : null,
-                  child: m.counterpartPhotoUrl == null ? const Icon(Icons.person) : null,
+          return ListView(
+            children: [
+              if (active.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text("Active", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                title: Text(m.counterpartDisplayName),
-                onTap: () => context.go("/chat/${m.id}"),
-              );
-            },
+                ...active.map((m) => _MatchTile(match: m, active: true)),
+              ],
+              if (past.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text("Past matches", style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                ...past.map((m) => _MatchTile(match: m, active: false)),
+              ],
+            ],
           );
         },
       ),
+    );
+  }
+}
+
+class _MatchTile extends StatelessWidget {
+  const _MatchTile({required this.match, required this.active});
+
+  final MatchSummary match;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundImage:
+            match.counterpartPhotoUrl != null ? NetworkImage(match.counterpartPhotoUrl!) : null,
+        child: match.counterpartPhotoUrl == null ? const Icon(Icons.person) : null,
+      ),
+      title: Text(match.counterpartDisplayName),
+      subtitle: active
+          ? null
+          : Text(match.status == "unmatched" ? "Unmatched" : "Expired"),
+      trailing: active ? null : const Icon(Icons.chat_bubble_outline, size: 18),
+      onTap: () => context.go("/chat/${match.id}"),
     );
   }
 }
