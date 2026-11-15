@@ -63,8 +63,7 @@ When you're ready for any of these, just say so in a new session (or this one) w
 ## Workflow conventions (already set up, keep following these)
 
 - **Every change starts with a GitHub issue**, goes on a `feat/issue-N-slug` or `fix/issue-N-slug` branch, opens a PR, waits for CI (`gh run list` / a Monitor loop), then gets squash-merged — **never push directly to `main`**. This was an explicit, repeated user requirement (see git history around issue #15/#16 where this was first enforced).
-- After merging a Flutter-affecting PR, **redeploy the web app**: `flutter build web --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app` from `apps/mobile`, then `vercel deploy build/web --prod --yes --project airport-ride-matchmaking-web`.
-- After merging an API-affecting PR, redeploy from the **repo root** (not `apps/api` — see Gotchas): `vercel deploy --prod --yes`.
+- **Deploys to both projects are now automatic on merge to `main`** (see issue #41): the API project is connected to Vercel's native GitHub integration (deploys itself, no workflow step); the web app is built and deployed by the `deploy-web` job in `.github/workflows/ci.yml`, which runs after the Mobile CI job passes and needs a `VERCEL_TOKEN` repo secret. If you ever need to redeploy manually: web is `flutter build web --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app` from `apps/mobile` then `vercel deploy build/web --prod --yes --project airport-ride-matchmaking-web`; API is `vercel deploy --prod --yes` from the **repo root** (not `apps/api` — see Gotchas).
 - Full rule set: [CLAUDE.md](../CLAUDE.md).
 
 ## Gotchas / things that will bite you if forgotten
