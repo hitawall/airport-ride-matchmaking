@@ -89,16 +89,46 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             ),
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<Locality>(
-            initialValue: _destination,
-            decoration: const InputDecoration(
-              labelText: "Destination locality",
-              border: OutlineInputBorder(),
+          Autocomplete<Locality>(
+            optionsBuilder: (value) {
+              if (value.text.isEmpty) return bengaluruLocalities;
+              final query = value.text.toLowerCase();
+              return bengaluruLocalities.where((l) => l.label.toLowerCase().contains(query));
+            },
+            displayStringForOption: (l) => l.label,
+            onSelected: (l) => setState(() => _destination = l),
+            fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) => TextField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: const InputDecoration(
+                labelText: "Destination locality",
+                hintText: "Search for your area",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
             ),
-            items: bengaluruLocalities
-                .map((l) => DropdownMenuItem(value: l, child: Text(l.label)))
-                .toList(),
-            onChanged: (v) => setState(() => _destination = v),
+            optionsViewBuilder: (context, onSelected, options) => Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280, minWidth: 280),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, i) {
+                      final option = options.elementAt(i);
+                      return ListTile(
+                        title: Text(option.label),
+                        onTap: () => onSelected(option),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Material(
