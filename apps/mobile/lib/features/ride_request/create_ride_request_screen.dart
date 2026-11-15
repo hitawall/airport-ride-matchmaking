@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/bcbp_decoder.dart";
 import "../../core/home_leading_button.dart";
 import "../../data/bengaluru_localities.dart";
 
@@ -22,16 +23,33 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
 
   Future<void> _pickArrivalTime() async {
     final now = DateTime.now();
+    final lastAllowed = now.add(const Duration(days: 30));
+    var initial = _arrivalAt ?? now;
+    if (initial.isBefore(now)) initial = now;
+    if (initial.isAfter(lastAllowed)) initial = lastAllowed;
+
     final date = await showDatePicker(
       context: context,
-      initialDate: now,
+      initialDate: initial,
       firstDate: now,
-      lastDate: now.add(const Duration(days: 30)),
+      lastDate: lastAllowed,
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(now));
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
     if (time == null) return;
     setState(() => _arrivalAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+  }
+
+  Future<void> _scanBoardingPass() async {
+    final result = await context.push<BoardingPassData>("/scan-boarding-pass");
+    if (result == null || !mounted) return;
+    setState(() {
+      _flightController.text = result.carrierFlightNumber;
+      _arrivalAt = DateTime(result.flightDate.year, result.flightDate.month, result.flightDate.day, 12);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Flight number and date filled in -- please confirm the time below.")),
+    );
   }
 
   Future<void> _submit() async {
@@ -87,6 +105,12 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
               labelText: "Flight number (optional)",
               border: OutlineInputBorder(),
             ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _scanBoardingPass,
+            icon: const Icon(Icons.document_scanner_outlined),
+            label: const Text("Scan boarding pass instead"),
           ),
           const SizedBox(height: 16),
           Autocomplete<Locality>(
