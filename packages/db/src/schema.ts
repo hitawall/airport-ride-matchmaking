@@ -186,6 +186,28 @@ export const reports = pgTable(
   ],
 );
 
+export const ratings = pgTable(
+  "ratings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    raterId: uuid("rater_id")
+      .notNull()
+      .references(() => users.id),
+    ratedId: uuid("rated_id")
+      .notNull()
+      .references(() => users.id),
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id),
+    score: integer("score").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("rating_score_check", sql`${table.score} BETWEEN 1 AND 5`),
+    uniqueIndex("ratings_rater_match_unique_idx").on(table.raterId, table.matchId),
+  ],
+);
+
 export const blocks = pgTable(
   "blocks",
   {
