@@ -65,3 +65,7 @@ export const reportCreateSchema = z.object({
 export const blockCreateSchema = z.object({
   blockedUserId: z.string().uuid(),
 });
+
+export const ratingCreateSchema = z.object({
+  score: z.number().int().min(1).max(5),
+});

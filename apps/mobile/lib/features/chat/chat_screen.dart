@@ -22,6 +22,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Timer? _pollTimer;
   String? _counterpartUserId;
   String? _matchStatus;
+  double? _counterpartAvgRating;
+  int _counterpartRatingCount = 0;
+  bool _hasRated = false;
   late final String _channelName = "match-${widget.matchId}";
 
   bool get _isActive => _matchStatus == null || _matchStatus == "mutual";
@@ -61,6 +64,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         setState(() {
           _counterpartUserId = other as String;
           _matchStatus = match["status"] as String?;
+          final avgRating = match["counterpartAvgRating"];
+          _counterpartAvgRating = avgRating == null ? null : (avgRating as num).toDouble();
+          _counterpartRatingCount = (match["counterpartRatingCount"] as num?)?.toInt() ?? 0;
         });
       }
     } on ApiException {
@@ -90,6 +96,55 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted) setState(() => _matchStatus = "unmatched");
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _rate() async {
+    var selected = 5;
+    final score = await showDialog<int>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text("Rate your match"),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final star = i + 1;
+              return IconButton(
+                icon: Icon(
+                  star <= selected ? Icons.star : Icons.star_border,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () => setDialogState(() => selected = star),
+              );
+            }),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Cancel")),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(selected),
+              child: const Text("Submit"),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (score == null) return;
+
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.post("/api/matches/${widget.matchId}/rating", {"score": score});
+      if (mounted) {
+        setState(() => _hasRated = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Thanks for rating your match!")),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _hasRated = true);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 
@@ -130,6 +185,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await _unmatch();
       return;
     }
+    if (action == "rate") {
+      await _rate();
+      return;
+    }
     if (_counterpartUserId == null) return;
     final api = ref.read(apiClientProvider);
     try {
@@ -159,12 +218,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: homeLeadingButton(context),
-        title: const Text("Chat"),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Chat"),
+            if (_counterpartRatingCount > 0)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.star, size: 14, color: Colors.amber),
+                  const SizedBox(width: 2),
+                  Text(
+                    "${_counterpartAvgRating!.toStringAsFixed(1)} ($_counterpartRatingCount)",
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: _onMenuAction,
             itemBuilder: (context) => [
               if (_isActive) const PopupMenuItem(value: "unmatch", child: Text("Unmatch")),
+              if (!_isActive && !_hasRated)
+                const PopupMenuItem(value: "rate", child: Text("Rate your match")),
               const PopupMenuItem(value: "report", child: Text("Report")),
               const PopupMenuItem(value: "block", child: Text("Block")),
             ],

@@ -43,6 +43,13 @@
       "when": 1794769443166,
       "tag": "0005_plain_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794770604263,
+      "tag": "0006_dark_serpent_society",
+      "breakpoints": true
     }
   ]
 }
