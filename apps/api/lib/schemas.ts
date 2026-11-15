@@ -27,6 +27,7 @@ export const profileUpdateSchema = z.object({
   homeLocalityLabel: z.string().max(120).optional(),
   bio: z.string().max(280).optional(),
   phoneNumber: phoneNumberSchema,
+  profilePhotoUrl: z.string().url().optional(),
 });
 
 export const rideRequestCreateSchema = z.object({

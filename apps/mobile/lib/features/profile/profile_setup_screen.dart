@@ -124,6 +124,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       context.go("/home");
     } on ApiException catch (e) {
       setState(() => _error = e.message);
+    } catch (_) {
+      // Anything other than a clean API error (a network hiccup, a photo
+      // upload timing out) -- still surface something rather than silently
+      // reverting the button with no explanation.
+      setState(() => _error = "Something went wrong -- please try again.");
     } finally {
       if (mounted) setState(() => _loading = false);
     }
