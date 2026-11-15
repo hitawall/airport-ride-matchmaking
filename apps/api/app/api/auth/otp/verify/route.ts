@@ -6,6 +6,8 @@ import { jsonError } from "@/lib/api-response";
 import { issueToken } from "@/lib/auth";
 import { env } from "@/lib/env";
 
+const MAX_VERIFY_ATTEMPTS = 5;
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = otpVerifySchema.safeParse(body);
@@ -26,9 +28,18 @@ export async function POST(request: Request) {
     .orderBy(desc(otpRequests.createdAt))
     .limit(1);
   if (!otpRow) return jsonError("OTP request not found or expired", 400);
+  if (otpRow.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+    return jsonError("Too many incorrect attempts. Request a new code.", 429);
+  }
 
   const ok = env.otpTestMode ? code === "000000" : code === otpRow.code;
-  if (!ok) return jsonError("Invalid code", 400);
+  if (!ok) {
+    await db
+      .update(otpRequests)
+      .set({ attemptCount: otpRow.attemptCount + 1 })
+      .where(eq(otpRequests.id, otpRow.id));
+    return jsonError("Invalid code", 400);
+  }
 
   await db.update(otpRequests).set({ verifiedAt: new Date() }).where(eq(otpRequests.id, otpRow.id));
 
