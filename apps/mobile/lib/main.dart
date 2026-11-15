@@ -17,6 +17,9 @@ class AirportRideMatchmakingApp extends ConsumerWidget {
       title: "Airport Ride Matchmaking",
       theme: AppTheme.light(),
       routerConfig: router,
+      // The default debug banner sits on top of the Settings icon in several
+      // AppBars and absorbs its taps -- see issue #37.
+      debugShowCheckedModeBanner: false,
     );
   }
 }
