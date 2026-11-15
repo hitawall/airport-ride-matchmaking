@@ -4,8 +4,9 @@
 > - Google Maps / Places autocomplete was deferred; destination entry uses a curated Bengaluru-locality dropdown instead (works without any API key)
 > - `pusher_channels_flutter` was dropped from the client; chat/match updates use polling only for now
 > - `freezed`/`json_serializable` codegen was dropped in favor of plain hand-written Dart model classes (simpler, no build_runner step)
-> - An `OTP_TEST_MODE` bypass was added post-launch so the app is testable without MSG91 credentials
+> - An `OTP_TEST_MODE` bypass was added post-launch so the app is testable without real OTP-provider credentials
 > - A real Home/dashboard screen, consistent back-navigation, swipe gestures, and a full visual design pass were added in response to user testing feedback (none of this was in the original milestone list)
+> - Auth switched from phone+SMS (MSG91) to **email OTP via Resend**, behind a swappable `OtpChannel` strategy interface. Phone number is still collected (profile-setup screen) but only for reporting — format-checked, never verified, never used for login
 >
 > Read this for *why* the foundation looks the way it does. Read **PROJECT_STATE.md** for *what's actually running right now* and what to do next.
 

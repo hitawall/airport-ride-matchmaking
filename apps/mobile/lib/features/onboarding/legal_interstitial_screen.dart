@@ -33,7 +33,7 @@ class LegalInterstitialScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: () => context.go("/phone"),
+                  onPressed: () => context.go("/email"),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text("I understand, continue"),

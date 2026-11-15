@@ -8,15 +8,16 @@ export const env = {
   get jwtSecret() {
     return required("JWT_SECRET");
   },
-  /** Trial-only bypass: accepts a fixed dev OTP code instead of sending real SMS. Never enable with real users. */
+  /** Trial-only bypass: accepts a fixed dev OTP code instead of sending a real email. Never enable with real users. */
   get otpTestMode() {
     return process.env.OTP_TEST_MODE === "true";
   },
-  get msg91AuthKey() {
-    return required("MSG91_AUTH_KEY");
+  get resendApiKey() {
+    return required("RESEND_API_KEY");
   },
-  get msg91TemplateId() {
-    return required("MSG91_TEMPLATE_ID");
+  /** Must be an address on a domain verified with Resend. */
+  get otpFromEmail() {
+    return required("OTP_FROM_EMAIL");
   },
   get pusherAppId() {
     return required("PUSHER_APP_ID");
