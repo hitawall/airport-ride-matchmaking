@@ -136,33 +136,53 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Set up your profile")),
+      appBar: AppBar(title: Text(_isNewProfile ? "Set up your profile" : "Edit profile")),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Center(
-            child: GestureDetector(
-              onTap: _pickPhoto,
-              child: CircleAvatar(
-                radius: 48,
-                backgroundImage: _photoBytes != null
-                    ? MemoryImage(_photoBytes!)
-                    : (_existingPhotoUrl != null ? NetworkImage(_existingPhotoUrl!) : null),
-                child: _photoBytes == null && _existingPhotoUrl == null
-                    ? const Icon(Icons.add_a_photo)
-                    : null,
-              ),
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _pickPhoto,
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundImage: _photoBytes != null
+                        ? MemoryImage(_photoBytes!)
+                        : (_existingPhotoUrl != null ? NetworkImage(_existingPhotoUrl!) : null),
+                    child: _photoBytes == null && _existingPhotoUrl == null
+                        ? const Icon(Icons.add_a_photo)
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Tap to add a profile photo",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: "Display name", border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              labelText: "Display name",
+              helperText: "Shown to your match and in chat",
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _gender,
-            decoration: const InputDecoration(labelText: "Gender", border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              labelText: "Gender",
+              helperText: "Used to apply your matching preference below",
+              border: OutlineInputBorder(),
+            ),
             items: _genders.entries
                 .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                 .toList(),
@@ -181,7 +201,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             controller: _bioController,
             maxLength: 280,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: "Bio (optional)", border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              labelText: "Bio",
+              helperText: "Optional -- shown on your profile",
+              border: OutlineInputBorder(),
+            ),
           ),
           if (!_isNewProfile) ...[
             const SizedBox(height: 16),
@@ -205,9 +229,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             onPressed: _loading ? null : _submit,
             child: _loading
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text("Continue"),
+                : Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(_isNewProfile ? "Continue" : "Save changes"),
                   ),
           ),
         ],
