@@ -129,7 +129,7 @@ export const matches = pgTable(
   (table) => [
     check(
       "match_status_check",
-      sql`${table.status} IN ('proposed_by_a','proposed_by_b','mutual','rejected','expired')`,
+      sql`${table.status} IN ('proposed_by_a','proposed_by_b','mutual','rejected','expired','unmatched')`,
     ),
     uniqueIndex("matches_pair_unique_idx").on(
       sql`LEAST(${table.rideRequestAId}, ${table.rideRequestBId})`,
