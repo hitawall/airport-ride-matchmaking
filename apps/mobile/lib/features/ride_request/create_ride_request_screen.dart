@@ -35,16 +35,12 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   }
 
   Future<void> _submit() async {
-    if (_flightController.text.trim().isEmpty) {
-      setState(() => _error = "Enter your flight number");
-      return;
-    }
     if (_destination == null) {
       setState(() => _error = "Choose your destination");
       return;
     }
     if (_arrivalAt == null) {
-      setState(() => _error = "Choose your expected arrival time");
+      setState(() => _error = "Choose when you plan to depart the airport");
       return;
     }
     setState(() {
@@ -53,8 +49,9 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     });
     try {
       final api = ref.read(apiClientProvider);
+      final flightNumber = _flightController.text.trim();
       final result = await api.post("/api/ride-requests", {
-        "flightNumber": _flightController.text.trim(),
+        if (flightNumber.isNotEmpty) "flightNumber": flightNumber,
         "flightArrivalAt": _arrivalAt!.toUtc().toIso8601String(),
         "destinationAddress": _destination!.label,
         "destinationLat": _destination!.lat,
@@ -86,7 +83,10 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
           TextField(
             controller: _flightController,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(labelText: "Flight number", border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              labelText: "Flight number (optional)",
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<Locality>(
@@ -114,8 +114,8 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
                     Expanded(
                       child: Text(
                         _arrivalAt == null
-                            ? "Expected arrival time"
-                            : "Arriving ${_arrivalAt!.toLocal()}".split(".").first,
+                            ? "When do you plan to depart from the airport?"
+                            : "Departing ${_arrivalAt!.toLocal()}".split(".").first,
                       ),
                     ),
                     const Icon(Icons.schedule),

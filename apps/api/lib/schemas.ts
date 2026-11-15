@@ -30,7 +30,7 @@ export const profileUpdateSchema = z.object({
 });
 
 export const rideRequestCreateSchema = z.object({
-  flightNumber: z.string().min(2).max(12),
+  flightNumber: z.string().min(2).max(12).optional(),
   flightArrivalAt: z.string().datetime(),
   destinationAddress: z.string().min(1).max(240),
   destinationLat: z.number().gte(-90).lte(90),
