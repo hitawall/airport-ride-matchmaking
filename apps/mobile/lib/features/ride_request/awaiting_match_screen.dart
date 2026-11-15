@@ -56,6 +56,25 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   }
 
   Future<void> _cancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Cancel this request?"),
+        content: const Text(
+          "You'll stop showing up in other travelers' candidate lists and will need to "
+          "create a new request to search again.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Keep searching")),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Cancel request"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _cancelling = true);
     try {
       final api = ref.read(apiClientProvider);

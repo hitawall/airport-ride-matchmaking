@@ -23,20 +23,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.cancel_outlined),
             title: const Text("Cancel active ride request"),
-            onTap: () async {
-              try {
-                final mine = await api.get("/api/ride-requests/mine") as Map<String, dynamic>;
-                await api.patch("/api/ride-requests/${mine["id"]}", {"status": "cancelled"});
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text("Ride request cancelled")));
-                }
-              } on ApiException catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-                }
-              }
-            },
+            onTap: () => _cancelActiveRideRequest(context, api),
           ),
           ListTile(
             leading: const Icon(Icons.block),
@@ -55,6 +42,61 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _cancelActiveRideRequest(BuildContext context, ApiClient api) async {
+    Map<String, dynamic>? mine;
+    try {
+      mine = await api.get("/api/ride-requests/mine") as Map<String, dynamic>;
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.statusCode == 404 ? "You don't have a ride request" : e.message)),
+        );
+      }
+      return;
+    }
+
+    if (mine["status"] != "open") {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("You don't have an active ride request to cancel")));
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Cancel this request?"),
+        content: const Text(
+          "You'll stop showing up in other travelers' candidate lists and will need to "
+          "create a new request to search again.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Keep searching")),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Cancel request"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await api.patch("/api/ride-requests/${mine["id"]}", {"status": "cancelled"});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Ride request cancelled")));
+      }
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 
   void _showBlockedUsers(BuildContext context, ApiClient api) {
