@@ -56,7 +56,7 @@ Two integrations are deliberately deferred because they need credentials only yo
 
 | Issue | What | Interim substitute | What's needed from you |
 |---|---|---|---|
-| [#22](https://github.com/hitawall/airport-ride-matchmaking/issues/22) | Live Google Places autocomplete + map pin preview | Curated 15-locality dropdown (`apps/mobile/lib/data/bengaluru_localities.dart`) — works fine, no key needed | Google Cloud project, Maps JS/Places/Geocoding APIs enabled, billing, `GOOGLE_MAPS_API_KEY` |
+| [#22](https://github.com/hitawall/airport-ride-matchmaking/issues/22) | Live Ola Maps autocomplete + map pin preview (switched from Google Maps — better free tier, no card needed) | Curated 15-locality dropdown (`apps/mobile/lib/data/bengaluru_localities.dart`) — works fine, no key needed | Ola Maps account (`cloud.olakrutrim.com/signUp`, email only, no card) + API key |
 | [#43](https://github.com/hitawall/airport-ride-matchmaking/issues/43) | Google OAuth sign-in (alternative to email OTP) | Email OTP (see above) — works fine on its own | Google Cloud project + OAuth Client ID |
 
 When you're ready for any of these, just say so in a new session (or this one) with the credentials and I'll wire them in.
