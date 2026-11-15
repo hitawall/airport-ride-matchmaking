@@ -50,6 +50,13 @@
       "when": 1794770604263,
       "tag": "0006_dark_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794771635869,
+      "tag": "0007_needy_mandarin",
+      "breakpoints": true
     }
   ]
 }
