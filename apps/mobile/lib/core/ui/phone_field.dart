@@ -74,12 +74,16 @@ class _CountryPicker extends StatelessWidget {
         for (final option in supportedPhoneCountries)
           PopupMenuItem(value: option, child: Text("${option.name} (${option.label})")),
       ],
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(country.label, style: textTheme.titleSmall),
-          const Icon(Icons.arrow_drop_down),
-        ],
+      // At least 48 x 48 so it is easy to hit with a thumb.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(country.label, style: textTheme.titleSmall),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
       ),
     );
   }

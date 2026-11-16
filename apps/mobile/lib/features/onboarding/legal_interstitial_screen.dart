@@ -34,13 +34,13 @@ class LegalInterstitialScreen extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => context.push("/terms"),
-                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 child: const Text("Terms"),
               ),
               Text("and", style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               TextButton(
                 onPressed: () => context.push("/privacy"),
-                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 child: const Text("Privacy policy"),
               ),
             ],
