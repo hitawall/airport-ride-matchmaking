@@ -27,6 +27,8 @@ class Airport {
     required this.city,
     required this.terminals,
     required this.localities,
+    this.lat,
+    this.lng,
   });
 
   final String code;
@@ -35,12 +37,18 @@ class Airport {
   final List<Terminal> terminals;
   final List<Locality> localities;
 
+  /// Where the airport is (for the indicative fare split). Null if the server did not say.
+  final double? lat;
+  final double? lng;
+
   factory Airport.fromJson(Map<String, dynamic> json) => Airport(
     code: json["code"] as String,
     name: json["name"] as String,
     city: json["city"] as String,
     terminals: (json["terminals"] as List).map((t) => Terminal.fromJson(t as Map<String, dynamic>)).toList(),
     localities: (json["localities"] as List).map((l) => Locality.fromJson(l as Map<String, dynamic>)).toList(),
+    lat: (json["lat"] as num?)?.toDouble(),
+    lng: (json["lng"] as num?)?.toDouble(),
   );
 }
 

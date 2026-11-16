@@ -18,6 +18,8 @@ import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
+import "../matching/fare_split.dart";
+import "../matching/fare_split_sheet.dart";
 import "../matching/rate_match_dialog.dart";
 import "../matching/unmatch_flow.dart";
 
@@ -53,6 +55,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _meetingPoint;
   String? _counterpartPhotoUrl;
   String? _matchStatus;
+  String? _airportCode;
+  String? _myAreaLabel;
+  String? _counterpartAreaLabel;
   double? _counterpartAvgRating;
   int _counterpartRatingCount = 0;
   bool _hasRated = false;
@@ -119,6 +124,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               : airportTerminalLabel(match["airportCode"] as String?, match["terminal"] as String?);
           _counterpartPhotoUrl = match["counterpartPhotoUrl"] as String?;
           _matchStatus = match["status"] as String?;
+          _airportCode = match["airportCode"] as String?;
+          _myAreaLabel = match["myDestinationLocalityLabel"] as String?;
+          _counterpartAreaLabel = match["counterpartDestinationLocalityLabel"] as String?;
           final avgRating = match["counterpartAvgRating"];
           _counterpartAvgRating = avgRating == null ? null : (avgRating as num).toDouble();
           _counterpartRatingCount = (match["counterpartRatingCount"] as num?)?.toInt() ?? 0;
@@ -136,6 +144,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _endedByMe = true;
         _matchStatus = "unmatched";
       });
+    }
+  }
+
+  /// Opens the indicative fare split. Looks the two destination areas up in the
+  /// airport catalogue; if either is unknown there is nothing fair to suggest.
+  Future<void> _splitFare() async {
+    try {
+      final catalog = await ref.read(airportCatalogProvider.future);
+      final airport = catalog.airports.where((a) => a.code == _airportCode).firstOrNull;
+      Locality? find(String? label) => airport?.localities.where((l) => l.label == label).firstOrNull;
+      final mine = find(_myAreaLabel);
+      final theirs = find(_counterpartAreaLabel);
+      final airportLat = airport?.lat;
+      final airportLng = airport?.lng;
+      if (airportLat == null || airportLng == null || mine == null || theirs == null) {
+        if (mounted) showAppSnack(context, "We can't suggest a split for these destinations.");
+        return;
+      }
+      if (!mounted) return;
+      await showFareSplitSheet(
+        context,
+        airportLat: airportLat,
+        airportLng: airportLng,
+        riders: [
+          SplitRider(id: "me", name: "You", lat: mine.lat, lng: mine.lng),
+          SplitRider(id: "them", name: _displayName, lat: theirs.lat, lng: theirs.lng),
+        ],
+        areaByRiderId: {"me": mine.label, "them": theirs.label},
+      );
+    } catch (_) {
+      if (mounted) showAppSnack(context, "Couldn't open the fare split. Try again.", error: true);
     }
   }
 
@@ -357,6 +396,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 _SafetyActions(
                   canUnmatch: _isActive,
+                  onSplit: _isActive ? _splitFare : null,
                   onUnmatch: _unmatch,
                   onReport: _report,
                   onBlock: _block,
@@ -462,12 +502,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 class _SafetyActions extends StatelessWidget {
   const _SafetyActions({
     required this.canUnmatch,
+    required this.onSplit,
     required this.onUnmatch,
     required this.onReport,
     required this.onBlock,
   });
 
   final bool canUnmatch;
+  final VoidCallback? onSplit;
   final VoidCallback onUnmatch;
   final VoidCallback onReport;
   final VoidCallback onBlock;
@@ -480,6 +522,13 @@ class _SafetyActions extends StatelessWidget {
       child: Wrap(
         alignment: WrapAlignment.center,
         children: [
+          if (onSplit != null)
+            TextButton.icon(
+              onPressed: onSplit,
+              icon: const Icon(Icons.call_split, size: 18),
+              label: const Text("Split the fare"),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
           if (canUnmatch)
             TextButton.icon(
               onPressed: onUnmatch,

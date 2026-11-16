@@ -24,6 +24,9 @@ export interface Airport {
   code: string;
   name: string;
   city: string;
+  /** Where the airport is. Used only for the indicative fare split in the app. */
+  lat: number;
+  lng: number;
   terminals: Terminal[];
   /**
    * Curated destination list for airport -> home matching (bucketed by known
@@ -39,6 +42,8 @@ export const AIRPORTS: Airport[] = [
     code: "BLR",
     name: "Kempegowda International Airport",
     city: "Bengaluru",
+    lat: 13.1986,
+    lng: 77.7066,
     terminals: [
       { code: "T1", name: "Terminal 1" },
       { code: "T2", name: "Terminal 2" },
