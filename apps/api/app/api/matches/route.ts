@@ -30,6 +30,12 @@ export async function POST(request: Request) {
     .limit(1);
   if (!candidate) return jsonError("Candidate ride request not found", 404);
 
+  // Only people arriving at the same airport and terminal can be matched,
+  // whatever the client sends.
+  if (!mine.terminal || mine.airportCode !== candidate.airportCode || mine.terminal !== candidate.terminal) {
+    return jsonError("You can only match with people arriving at the same terminal", 409);
+  }
+
   const existing = await findExistingMatch(rideRequestId, candidateRideRequestId);
 
   if (action === "pass") {

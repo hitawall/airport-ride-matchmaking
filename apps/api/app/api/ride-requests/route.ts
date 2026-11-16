@@ -53,6 +53,8 @@ export async function POST(request: Request) {
     .insert(rideRequests)
     .values({
       userId,
+      airportCode: data.airportCode,
+      terminal: data.terminal,
       flightNumber: data.flightNumber,
       flightArrivalAt,
       arrivalWindowStart,
@@ -66,6 +68,10 @@ export async function POST(request: Request) {
     })
     .returning();
 
-  await track("ride_request_created", userId, { has_flight_number: !!parsed.data.flightNumber });
+  await track("ride_request_created", userId, {
+    has_flight_number: !!parsed.data.flightNumber,
+    airport: data.airportCode,
+    terminal: data.terminal,
+  });
   return NextResponse.json(rideRequest, { status: 201 });
 }

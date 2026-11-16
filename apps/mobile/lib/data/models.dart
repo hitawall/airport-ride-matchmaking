@@ -38,10 +38,14 @@ class RideRequest {
     this.flightNumber,
     required this.flightArrivalAt,
     required this.destinationLocalityLabel,
+    this.airportCode,
+    this.terminal,
   });
 
   final String id;
   final String status;
+  final String? airportCode;
+  final String? terminal;
   final String? flightNumber;
   final DateTime flightArrivalAt;
   final String destinationLocalityLabel;
@@ -52,6 +56,8 @@ class RideRequest {
     flightNumber: json["flightNumber"] as String?,
     flightArrivalAt: DateTime.parse(json["flightArrivalAt"] as String),
     destinationLocalityLabel: json["destinationLocalityLabel"] as String,
+    airportCode: json["airportCode"] as String?,
+    terminal: json["terminal"] as String?,
   );
 }
 
@@ -65,6 +71,8 @@ class Candidate {
     required this.flightArrivalAt,
     required this.destinationLocalityLabel,
     this.flightNumber,
+    this.airportCode,
+    this.terminal,
     this.bio,
     this.avgRating,
     this.ratingCount = 0,
@@ -78,6 +86,8 @@ class Candidate {
   final DateTime flightArrivalAt;
   final String destinationLocalityLabel;
   final String? flightNumber;
+  final String? airportCode;
+  final String? terminal;
   final String? bio;
   final double? avgRating;
   final int ratingCount;
@@ -91,6 +101,8 @@ class Candidate {
     flightArrivalAt: DateTime.parse(json["flight_arrival_at"] as String),
     destinationLocalityLabel: json["destination_locality_label"] as String,
     flightNumber: json["flight_number"] as String?,
+    airportCode: json["airport_code"] as String?,
+    terminal: json["terminal"] as String?,
     bio: json["bio"] as String?,
     avgRating: _toDouble(json["avg_rating"]),
     ratingCount: (_toDouble(json["rating_count"]) ?? 0).toInt(),
@@ -119,10 +131,14 @@ class MatchSummary {
     this.counterpartAvgRating,
     this.counterpartRatingCount = 0,
     this.updatedAt,
+    this.airportCode,
+    this.terminal,
   });
 
   final String id;
   final String status;
+  final String? airportCode;
+  final String? terminal;
   final String counterpartDisplayName;
   final String? counterpartPhotoUrl;
   final double? counterpartAvgRating;
@@ -137,6 +153,8 @@ class MatchSummary {
     counterpartAvgRating: _toDouble(json["counterpart_avg_rating"]),
     counterpartRatingCount: (_toDouble(json["counterpart_rating_count"]) ?? 0).toInt(),
     updatedAt: DateTime.tryParse("${json["updated_at"] ?? ""}"),
+    airportCode: json["airport_code"] as String?,
+    terminal: json["terminal"] as String?,
   );
 }
 

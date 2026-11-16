@@ -78,6 +78,11 @@ export const rideRequests = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
+    // Only people at the same airport AND terminal are ever matched. Terminal is
+    // nullable only for requests created before terminals existed; those can no
+    // longer match anyone and expire on their own. See docs/AIRPORTS.md.
+    airportCode: text("airport_code").notNull().default("BLR"),
+    terminal: text("terminal"),
     flightNumber: text("flight_number"),
     flightArrivalAt: timestamp("flight_arrival_at", { withTimezone: true }).notNull(),
     arrivalWindowStart: timestamp("arrival_window_start", { withTimezone: true }).notNull(),
@@ -95,6 +100,11 @@ export const rideRequests = pgTable(
   (table) => [
     check("status_check", sql`${table.status} IN ('open','matched','expired','cancelled')`),
     index("ride_requests_status_h3res7_idx").on(table.status, table.h3CellRes7),
+    index("ride_requests_status_airport_terminal_idx").on(
+      table.status,
+      table.airportCode,
+      table.terminal,
+    ),
     index("ride_requests_status_window_idx").on(
       table.status,
       table.arrivalWindowStart,

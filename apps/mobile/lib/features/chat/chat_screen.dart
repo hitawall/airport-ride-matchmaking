@@ -14,6 +14,7 @@ import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
+import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../matching/rate_match_dialog.dart";
 
@@ -46,6 +47,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Timer? _pollTimer;
   String? _counterpartUserId;
   String? _counterpartName;
+  String? _meetingPoint;
   String? _counterpartPhotoUrl;
   String? _matchStatus;
   double? _counterpartAvgRating;
@@ -100,6 +102,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         setState(() {
           _counterpartUserId = other as String;
           _counterpartName = match["counterpartDisplayName"] as String?;
+          _meetingPoint = match["terminal"] == null
+              ? null
+              : airportTerminalLabel(match["airportCode"] as String?, match["terminal"] as String?);
           _counterpartPhotoUrl = match["counterpartPhotoUrl"] as String?;
           _matchStatus = match["status"] as String?;
           final avgRating = match["counterpartAvgRating"];
@@ -271,6 +276,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (_meetingPoint != null)
+                    Text(
+                      "Meet at $_meetingPoint",
+                      style: textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   if (_counterpartRatingCount > 0 && _counterpartAvgRating != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,

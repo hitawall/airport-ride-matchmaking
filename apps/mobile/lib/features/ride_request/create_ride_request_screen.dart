@@ -11,9 +11,10 @@ import "../../core/ui/app_page.dart";
 import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/info_banner.dart";
+import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
-import "../../data/bengaluru_localities.dart";
+import "../../data/airports.dart";
 
 class CreateRideRequestScreen extends ConsumerStatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -25,6 +26,9 @@ class CreateRideRequestScreen extends ConsumerStatefulWidget {
 class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScreen> {
   final _flightController = TextEditingController();
   final _timeController = TextEditingController();
+  Airport? _airport;
+  String? _terminal;
+  String? _terminalError;
   Locality? _destination;
   DateTime? _arrivalAt;
   // The date read from a scanned boarding pass; the time still has to be
@@ -92,20 +96,23 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     });
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(Airport airport) async {
     setState(() {
       _error = null;
       _missingPhoto = false;
+      _terminalError = _terminal == null ? "Choose the terminal you arrive at" : null;
       _destinationError = _destination == null ? "Choose your destination from the list" : null;
       _timeError = _arrivalAt == null ? "Choose when you plan to leave the airport" : null;
     });
-    if (_destination == null || _arrivalAt == null) return;
+    if (_terminal == null || _destination == null || _arrivalAt == null) return;
 
     setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
       final flightNumber = _flightController.text.trim();
       final result = await api.post("/api/ride-requests", {
+        "airportCode": airport.code,
+        "terminal": _terminal,
         if (flightNumber.isNotEmpty) "flightNumber": flightNumber,
         "flightArrivalAt": _arrivalAt!.toUtc().toIso8601String(),
         "destinationAddress": _destination!.label,
@@ -127,6 +134,38 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
 
   @override
   Widget build(BuildContext context) {
+    final catalog = ref.watch(airportCatalogProvider);
+    return catalog.when(
+      loading: () => AppPage(
+        leading: homeLeadingButton(context),
+        title: "Where are you headed?",
+        body: const LoadingView(message: "Loading airports..."),
+      ),
+      error: (error, _) => AppPage(
+        leading: homeLeadingButton(context),
+        title: "Where are you headed?",
+        body: ErrorState(
+          message: "Couldn't load the airport list. Check your connection and try again.",
+          onRetry: () => ref.invalidate(airportCatalogProvider),
+        ),
+      ),
+      data: _buildForm,
+    );
+  }
+
+  void _selectAirport(Airport airport) {
+    if (_airport?.code == airport.code) return;
+    setState(() {
+      _airport = airport;
+      _terminal = null;
+      _terminalError = null;
+      _destination = null;
+      _destinationError = null;
+    });
+  }
+
+  Widget _buildForm(AirportCatalog catalog) {
+    final airport = _airport ?? catalog.defaultAirport;
     return AppPage(
       leading: homeLeadingButton(context),
       title: "Where are you headed?",
@@ -137,11 +176,66 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
           onPressed: () => context.push("/settings"),
         ),
       ],
-      bottomBar: PrimaryButton(label: "Find a match", loading: _loading, onPressed: _submit),
+      bottomBar: PrimaryButton(label: "Find a match", loading: _loading, onPressed: () => _submit(airport)),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _StepLabel(number: 1, text: "Your flight"),
+          const _StepLabel(number: 1, text: "Where do you land?"),
+          if (catalog.airports.length > 1)
+            DropdownButtonFormField<Airport>(
+              initialValue: airport,
+              decoration: const InputDecoration(labelText: "Airport", prefixIcon: Icon(Icons.flight_land_outlined)),
+              items: [
+                for (final a in catalog.airports)
+                  DropdownMenuItem(value: a, child: Text("${a.city} (${a.code})")),
+              ],
+              onChanged: (a) {
+                if (a != null) _selectAirport(a);
+              },
+            )
+          else
+            InputDecorator(
+              decoration: const InputDecoration(labelText: "Airport", prefixIcon: Icon(Icons.flight_land_outlined)),
+              child: Text("${airport.name} (${airport.code})"),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            "Terminal",
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final terminal in airport.terminals)
+                ChoiceChip(
+                  label: Text(terminal.name),
+                  selected: _terminal == terminal.code,
+                  onSelected: (_) => setState(() {
+                    _terminal = terminal.code;
+                    _terminalError = null;
+                  }),
+                ),
+            ],
+          ),
+          if (_terminalError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text(
+                _terminalError!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text(
+                "You'll only be matched with people arriving at the same terminal.",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ),
+          const _StepLabel(number: 2, text: "Your flight"),
           TextField(
             controller: _flightController,
             textCapitalization: TextCapitalization.characters,
@@ -156,13 +250,14 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
               ),
             ),
           ),
-          const _StepLabel(number: 2, text: "Where to?"),
+          const _StepLabel(number: 3, text: "Where to?"),
           LayoutBuilder(
             builder: (context, constraints) => Autocomplete<Locality>(
+              key: ValueKey(airport.code),
               optionsBuilder: (value) {
-                if (value.text.isEmpty) return bengaluruLocalities;
+                if (value.text.isEmpty) return airport.localities;
                 final query = value.text.toLowerCase();
-                return bengaluruLocalities.where((l) => l.label.toLowerCase().contains(query));
+                return airport.localities.where((l) => l.label.toLowerCase().contains(query));
               },
               displayStringForOption: (l) => l.label,
               onSelected: (l) => setState(() {
@@ -221,7 +316,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
               ),
             ),
           ),
-          const _StepLabel(number: 3, text: "When do you leave the airport?"),
+          const _StepLabel(number: 4, text: "When do you leave the airport?"),
           TextField(
             controller: _timeController,
             readOnly: true,
@@ -272,7 +367,7 @@ class _StepLabel extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(text, style: Theme.of(context).textTheme.titleSmall),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.titleSmall)),
         ],
       ),
     );
