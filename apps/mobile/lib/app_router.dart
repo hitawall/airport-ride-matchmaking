@@ -14,9 +14,10 @@ import "features/profile/profile_setup_screen.dart";
 import "features/ride_request/awaiting_match_screen.dart";
 import "features/ride_request/create_ride_request_screen.dart";
 import "features/ride_request/scan_boarding_pass_screen.dart";
+import "features/legal/delete_account_info_screen.dart";
 import "features/settings/settings_screen.dart";
 
-const _publicPaths = {"/", "/email", "/otp"};
+const _publicPaths = {"/", "/email", "/otp", "/delete-account"};
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authControllerProvider);
@@ -33,6 +34,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: "/", builder: (context, state) => const LegalInterstitialScreen()),
       GoRoute(path: "/email", builder: (context, state) => const EmailEntryScreen()),
+      GoRoute(path: "/delete-account", builder: (context, state) => const DeleteAccountInfoScreen()),
       GoRoute(
         path: "/otp",
         builder: (context, state) {

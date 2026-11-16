@@ -2,6 +2,7 @@ import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
+import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_card.dart";
@@ -113,9 +114,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
           SecondaryButton(label: "Log out", icon: Icons.logout, onPressed: _logOut),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            onPressed: _deleteAccount,
+            icon: const Icon(Icons.delete_outline),
+            label: const Text("Delete account"),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirmed = await confirmAction(
+      context,
+      title: "Delete your account?",
+      message:
+          "This permanently deletes your profile, photo, matches, chats, ratings and feedback. "
+          "Anyone you're matched with loses that match. This can't be undone.",
+      confirmLabel: "Delete account",
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await ref.read(apiClientProvider).delete("/api/account");
+    } on ApiException catch (e) {
+      if (mounted) showAppSnack(context, e.message, error: true);
+      return;
+    }
+    await ref.read(authControllerProvider.notifier).logout();
+    if (mounted) context.go("/");
   }
 
   Future<void> _cancelActiveRideRequest(BuildContext context, ApiClient api) async {
