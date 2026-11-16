@@ -15,9 +15,11 @@ import "features/ride_request/awaiting_match_screen.dart";
 import "features/ride_request/create_ride_request_screen.dart";
 import "features/ride_request/scan_boarding_pass_screen.dart";
 import "features/legal/delete_account_info_screen.dart";
+import "features/legal/legal_content.dart";
+import "features/legal/legal_document_screen.dart";
 import "features/settings/settings_screen.dart";
 
-const _publicPaths = {"/", "/email", "/otp", "/delete-account"};
+const _publicPaths = {"/", "/email", "/otp", "/delete-account", "/privacy", "/terms"};
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authControllerProvider);
@@ -35,6 +37,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: "/", builder: (context, state) => const LegalInterstitialScreen()),
       GoRoute(path: "/email", builder: (context, state) => const EmailEntryScreen()),
       GoRoute(path: "/delete-account", builder: (context, state) => const DeleteAccountInfoScreen()),
+      GoRoute(path: "/privacy", builder: (context, state) => LegalDocumentScreen(document: buildPrivacyPolicy())),
+      GoRoute(path: "/terms", builder: (context, state) => LegalDocumentScreen(document: buildTerms())),
       GoRoute(
         path: "/otp",
         builder: (context, state) {
