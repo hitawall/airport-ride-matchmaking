@@ -6,8 +6,8 @@ A ride-matchmaking app for Bengaluru — travelers landing at Kempegowda Interna
 
 ## Live
 
-- **Web app**: https://airport-ride-matchmaking-web.vercel.app
-- **API**: https://airport-ride-matchmaking-api.vercel.app
+- **Web app**: https://airpool.online
+- **API**: https://api.airpool.online
 
 Log in with any phone number — OTP code **`000000`** works for now (trial mode, see [`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)).
 

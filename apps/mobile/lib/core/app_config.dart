@@ -23,7 +23,7 @@ class AppConfig {
   /// Public address of the web app, used in links we show.
   static const webAppUrl = String.fromEnvironment(
     "WEB_APP_URL",
-    defaultValue: "https://airport-ride-matchmaking-web.vercel.app",
+    defaultValue: "https://airpool.online",
   );
 
   /// Set to true only after the owner (and ideally a lawyer) has reviewed the

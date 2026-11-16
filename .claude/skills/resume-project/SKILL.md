@@ -11,13 +11,13 @@ This project has substantial history that lives in GitHub (issues/PRs), not just
 2. **Read `docs/MVP_PLAN.md`** — the original architecture plan and the reasoning behind it (why Flutter over React Native, the legal positioning, the product decisions). It has a header noting where reality has since diverged from the plan — trust PROJECT_STATE.md over this for anything that conflicts.
 3. **Read `CLAUDE.md`** — the git workflow rules for this repo. The short version: every change starts with a GitHub issue, goes on a `feat/issue-N-slug` or `fix/issue-N-slug` branch, opens a PR, waits for CI, then gets squash-merged. **Never push directly to `main`** — this was an explicit, repeated requirement from the project owner earlier in this project's history (see the discussion around issue #15/#16 if you want the full context of why).
 4. **Check open issues**: `gh issue list --state open` — as of the last update to PROJECT_STATE.md, issues #22 (Google Maps) and #43 (Google OAuth sign-in) are open and blocked on the user providing credentials. Don't start on these unprompted; they need the user's input first. (#23 Pusher and #24 real email OTP are both done.)
-5. **If the user reports a bug**, check Vercel production logs first (`vercel logs airport-ride-matchmaking-api.vercel.app --environment production`) before assuming where the fault lies — more than once in this project's history, a reported "broken button" turned out to be a backend working perfectly with zero client-side feedback, not a logic bug. Verify before diagnosing.
+5. **If the user reports a bug**, check Vercel production logs first (`vercel logs api.airpool.online --environment production`) before assuming where the fault lies — more than once in this project's history, a reported "broken button" turned out to be a backend working perfectly with zero client-side feedback, not a logic bug. Verify before diagnosing.
 6. **If you haven't run `scripts/setup-dev-environment.sh` yet on this machine**, do that first — it checks for required tools (Node, pnpm, Flutter, Vercel CLI, gh CLI), installs dependencies, and links/pulls Vercel env vars.
 
 ## Quick facts you'll otherwise re-derive the hard way
 
-- Live web app: https://airport-ride-matchmaking-web.vercel.app
-- Live API: https://airport-ride-matchmaking-api.vercel.app
+- Live web app: https://airpool.online
+- Live API: https://api.airpool.online
 - OTP login sends a real email via Resend (`OTP_TEST_MODE=false` in production); set it to `true` locally/temporarily for free testing, which accepts the fixed code `000000` for any email
 - Chat/match updates push in realtime via Pusher Channels; polling remains as a fallback
 - The Vercel API project must be deployed **from the repo root**, not `apps/api` (breaks the pnpm workspace otherwise) — see PROJECT_STATE.md "Gotchas" for why

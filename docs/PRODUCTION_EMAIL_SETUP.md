@@ -25,7 +25,7 @@ turn test mode off until step 3 works, or nobody can log in.**
 Checks the live API without revealing any secret values:
 
 ```bash
-node apps/api/scripts/preflight.mjs https://airport-ride-matchmaking-api.vercel.app "<CRON_SECRET>"
+node apps/api/scripts/preflight.mjs https://api.airpool.online "<CRON_SECRET>"
 ```
 
 It also runs from GitHub: Actions > "Production preflight" > Run workflow

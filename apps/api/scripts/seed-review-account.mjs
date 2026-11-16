@@ -14,7 +14,7 @@ if (!process.env.DATABASE_URL) throw new Error("Set DATABASE_URL first");
 
 const photoUrl =
   process.env.REVIEW_ACCOUNT_PHOTO_URL ??
-  "https://airport-ride-matchmaking-web.vercel.app/icons/Icon-512.png";
+  "https://airpool.online/icons/Icon-512.png";
 
 const sql = neon(process.env.DATABASE_URL);
 

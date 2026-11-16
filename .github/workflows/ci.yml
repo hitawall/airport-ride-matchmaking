@@ -97,7 +97,7 @@ jobs:
           WEB_APP_URL: ${{ vars.WEB_APP_URL }}
           LEGAL_REVIEWED: ${{ vars.LEGAL_REVIEWED }}
         run: bash ../../.github/scripts/app-defines.sh
-      - run: flutter build appbundle --release --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
+      - run: flutter build appbundle --release --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://api.airpool.online --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
       - name: Bundle must not be debug-signed
         run: |
           keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | tee /tmp/cert.txt
@@ -153,5 +153,5 @@ jobs:
           WEB_APP_URL: ${{ vars.WEB_APP_URL }}
           LEGAL_REVIEWED: ${{ vars.LEGAL_REVIEWED }}
         run: bash ../../.github/scripts/app-defines.sh
-      - run: flutter build web --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
+      - run: flutter build web --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://api.airpool.online --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
       - run: npx vercel deploy build/web --prod --yes --token=${{ secrets.VERCEL_TOKEN }}

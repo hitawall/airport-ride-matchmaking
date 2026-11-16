@@ -8,7 +8,7 @@ on:
     inputs:
       api_url:
         description: API base URL
-        default: https://airport-ride-matchmaking-api.vercel.app
+        default: https://api.airpool.online
 
 permissions:
   contents: read
