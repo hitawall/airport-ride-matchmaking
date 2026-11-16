@@ -41,6 +41,13 @@ jobs:
   android:
     name: Android release build
     runs-on: ubuntu-latest
+    env:
+      # Optional repository secrets for the real upload key (see
+      # docs/ANDROID_RELEASE_SIGNING.md). Absent on forks and until you add them.
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     defaults:
       run:
         working-directory: apps/mobile
@@ -56,7 +63,46 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
+      - name: Configure release signing
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+            {
+              echo "storeFile=../upload-keystore.jks"
+              echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+              echo "keyAlias=$ANDROID_KEY_ALIAS"
+              echo "keyPassword=$ANDROID_KEY_PASSWORD"
+            } > android/key.properties
+            echo "SIGNING=upload" >> "$GITHUB_ENV"
+          else
+            # No real key available (pull requests from forks, secrets not set up
+            # yet): sign with a throwaway key so the release signing path is
+            # still exercised. This artifact is never published.
+            keytool -genkeypair -keystore android/upload-keystore.jks -alias ci -storepass ci-password -keypass ci-password -dname "CN=CI Throwaway, O=CI" -keyalg RSA -keysize 2048 -validity 2
+            {
+              echo "storeFile=../upload-keystore.jks"
+              echo "storePassword=ci-password"
+              echo "keyAlias=ci"
+              echo "keyPassword=ci-password"
+            } > android/key.properties
+            echo "SIGNING=throwaway" >> "$GITHUB_ENV"
+          fi
       - run: flutter build appbundle --release --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
+      - name: Bundle must not be debug-signed
+        run: |
+          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab | tee /tmp/cert.txt
+          if grep -q "Android Debug" /tmp/cert.txt; then
+            echo "The release bundle is signed with the debug key" >&2
+            exit 1
+          fi
+          if [ "$SIGNING" = "throwaway" ]; then grep -q "CI Throwaway" /tmp/cert.txt; fi
+      - name: Upload signed bundle
+        if: env.SIGNING == 'upload' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 14
       - name: Release manifest must allow network and camera
         run: |
           manifest=$(find build/app/intermediates/merged_manifests -path '*elease*' -name AndroidManifest.xml | head -1)
