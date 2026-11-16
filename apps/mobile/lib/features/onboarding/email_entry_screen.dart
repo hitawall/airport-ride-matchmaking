@@ -3,8 +3,10 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/phone.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_page.dart";
+import "../../core/ui/phone_field.dart";
 import "../../core/ui/tokens.dart";
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
@@ -17,6 +19,7 @@ class EmailEntryScreen extends ConsumerStatefulWidget {
 class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  PhoneCountry _country = defaultPhoneCountry;
   bool _loading = false;
   String? _emailError;
   String? _phoneError;
@@ -30,16 +33,14 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
 
   Future<void> _submit() async {
     final email = _emailController.text.trim();
-    final phoneNumber = _phoneController.text.trim();
+    final phoneNumber = normalizePhoneNumber(_phoneController.text, country: _country);
     setState(() {
       _emailError = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").hasMatch(email)
           ? null
           : "Enter a valid email address";
-      _phoneError = RegExp(r"^\+?\d{8,15}$").hasMatch(phoneNumber)
-          ? null
-          : "Enter a valid phone number";
+      _phoneError = phoneNumber == null ? _country.invalidMessage : null;
     });
-    if (_emailError != null || _phoneError != null) return;
+    if (_emailError != null || phoneNumber == null) return;
 
     setState(() => _loading = true);
     try {
@@ -98,18 +99,17 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          TextField(
+          PhoneField(
             controller: _phoneController,
-            keyboardType: TextInputType.phone,
+            country: _country,
+            onCountryChanged: (country) => setState(() => _country = country),
             textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.telephoneNumber],
+            onChanged: (_) {
+              if (_phoneError != null) setState(() => _phoneError = null);
+            },
             onSubmitted: (_) => _loading ? null : _submit(),
-            decoration: InputDecoration(
-              errorText: _phoneError,
-              labelText: "Phone number",
-              helperText: "For safety and records only. Never shown to your match.",
-              prefixIcon: const Icon(Icons.phone_outlined),
-            ),
+            errorText: _phoneError,
+            helperText: "For safety and records only. Never shown to your match.",
           ),
         ],
       ),

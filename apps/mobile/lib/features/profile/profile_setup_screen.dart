@@ -5,6 +5,8 @@ import "package:go_router/go_router.dart";
 import "package:image_picker/image_picker.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/phone.dart";
+import "../../core/ui/phone_field.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_card.dart";
 import "../../core/ui/app_page.dart";
@@ -21,8 +23,6 @@ const _genders = {
   "prefer_not_to_say": "Prefer not to say",
 };
 
-final _phonePattern = RegExp(r"^\+?\d{8,15}$");
-
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
@@ -34,6 +34,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
   final _phoneController = TextEditingController();
+  PhoneCountry _country = defaultPhoneCountry;
   String _gender = "prefer_not_to_say";
   String _genderPreference = "any";
   String? _existingPhotoUrl;
@@ -56,7 +57,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   void initState() {
     super.initState();
-    _phoneController.text = ref.read(pendingSignupPhoneNumberProvider) ?? "";
+    _phoneController.text = phoneForInput(ref.read(pendingSignupPhoneNumberProvider));
     _loadExistingProfile();
   }
 
@@ -78,7 +79,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _gender = profile["gender"] as String? ?? _gender;
         _genderPreference = profile["genderPreference"] as String? ?? _genderPreference;
         _bioController.text = profile["bio"] as String? ?? "";
-        _phoneController.text = profile["phoneNumber"] as String? ?? "";
+        _phoneController.text = phoneForInput(profile["phoneNumber"] as String?);
         _existingPhotoUrl = profile["profilePhotoUrl"] as String?;
         _isNewProfile = false;
       });
@@ -102,17 +103,18 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   Future<void> _submit() async {
     final name = _nameController.text.trim();
-    final phoneNumber = _phoneController.text.trim();
-    final phoneValid = _phonePattern.hasMatch(phoneNumber);
+    final rawPhone = _phoneController.text.trim();
+    final phoneNumber = normalizePhoneNumber(rawPhone, country: _country);
+    final phoneValid = phoneNumber != null;
 
     setState(() {
       _error = null;
       _nameError = name.isEmpty ? "Tell us what to call you" : null;
       if (!phoneValid) {
         if (_isNewProfile) _needsPhone = true;
-        _phoneError = _isNewProfile && phoneNumber.isEmpty
+        _phoneError = _isNewProfile && rawPhone.isEmpty
             ? "Add your phone number to continue"
-            : "Enter a valid phone number";
+            : _country.invalidMessage;
       } else {
         _phoneError = null;
       }
@@ -285,19 +287,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           if (_showPhone) ...[
             const SectionHeader("Contact"),
             AppCard(
-              child: TextField(
+              child: PhoneField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                autofillHints: const [AutofillHints.telephoneNumber],
+                country: _country,
+                onCountryChanged: (country) => setState(() => _country = country),
                 onChanged: (_) {
                   if (_phoneError != null) setState(() => _phoneError = null);
                 },
-                decoration: InputDecoration(
-                  labelText: "Phone number",
-                  helperText: "For safety and records only. Never shown to your match.",
-                  errorText: _phoneError,
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                ),
+                errorText: _phoneError,
+                helperText: "For safety and records only. Never shown to your match.",
               ),
             ),
           ],

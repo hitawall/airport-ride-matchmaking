@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhoneNumber } from "./phone";
 
 export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address");
 
@@ -12,13 +13,17 @@ export const otpVerifySchema = z.object({
   code: z.string().min(4).max(8),
 });
 
-// Loose, intentionally permissive -- this is recorded for reporting only,
-// never verified or used for auth, so it just needs to look like a phone
-// number (digits, optional leading +, 8-15 digits).
-export const phoneNumberSchema = z
-  .string()
-  .trim()
-  .regex(/^\+?\d{8,15}$/, "Enter a valid phone number");
+// Recorded for safety reporting only (never verified or used for auth), but it
+// must be a real mobile number for a supported country (see lib/phone.ts). The
+// parsed value is the normalized E.164 form, e.g. +919876543210.
+export const phoneNumberSchema = z.string().transform((value, ctx) => {
+  const normalized = normalizePhoneNumber(value);
+  if (!normalized) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid 10-digit Indian mobile number" });
+    return z.NEVER;
+  }
+  return normalized;
+});
 
 export const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(80),
