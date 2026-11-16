@@ -38,11 +38,17 @@ Future<bool> confirmAction(
   return result == true;
 }
 
-/// A consistent floating snackbar. Errors use the danger colour.
-void showAppSnack(BuildContext context, String message, {bool error = false}) {
+/// A consistent floating snackbar. Errors use the danger colour. Raise
+/// [bottomInset] on screens with controls along the bottom edge so the
+/// snackbar floats above them instead of blocking taps.
+void showAppSnack(BuildContext context, String message, {bool error = false, double bottomInset = AppSpacing.lg}) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: error ? AppTheme.danger : null),
+    SnackBar(
+      content: Text(message),
+      backgroundColor: error ? AppTheme.danger : null,
+      margin: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, bottomInset),
+    ),
   );
 }

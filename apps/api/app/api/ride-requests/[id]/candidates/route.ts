@@ -48,9 +48,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const candidates = await db.execute(sql`
     SELECT rr.id, rr.user_id, rr.flight_number, rr.flight_arrival_at, rr.destination_locality_label,
            rr.h3_cell_res7, rr.h3_cell_res8,
-           p.display_name, p.gender, p.profile_photo_url
+           p.display_name, p.gender, p.profile_photo_url, p.bio,
+           r.avg_rating, r.rating_count
     FROM ride_requests rr
     JOIN profiles p ON p.user_id = rr.user_id
+    LEFT JOIN (
+      SELECT rated_id, AVG(score)::float8 AS avg_rating, COUNT(*)::int AS rating_count
+      FROM ratings GROUP BY rated_id
+    ) r ON r.rated_id = rr.user_id
     WHERE rr.status = 'open'
       AND rr.user_id != ${mine.user_id}
       AND rr.h3_cell_res7 = ANY(${neighborCellsLiteral}::text[])

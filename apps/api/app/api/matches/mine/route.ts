@@ -20,7 +20,11 @@ export async function GET(request: Request) {
     JOIN profiles pb ON pb.user_id = m.user_b_id
     LEFT JOIN (SELECT rated_id, AVG(score)::numeric(3,2) AS avg_rating, COUNT(*)::int AS rating_count FROM ratings GROUP BY rated_id) ra ON ra.rated_id = m.user_a_id
     LEFT JOIN (SELECT rated_id, AVG(score)::numeric(3,2) AS avg_rating, COUNT(*)::int AS rating_count FROM ratings GROUP BY rated_id) rb ON rb.rated_id = m.user_b_id
-    WHERE m.user_a_id = ${userId} OR m.user_b_id = ${userId}
+    WHERE (m.user_a_id = ${userId} OR m.user_b_id = ${userId})
+      -- Forming a mutual match also marks the user's other open proposals
+      -- 'expired'. Those were never matches, so only keep an expired row when
+      -- both people responded (i.e. it really was mutual before it lapsed).
+      AND (m.status <> 'expired' OR (m.responded_at_a IS NOT NULL AND m.responded_at_b IS NOT NULL))
     ORDER BY m.updated_at DESC
   `);
 
