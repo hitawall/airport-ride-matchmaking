@@ -1,5 +1,5 @@
-import { and, eq, or, sql, type InferSelectModel } from "drizzle-orm";
-import { getDb, matches } from "@airport-ride-matchmaking/db";
+import { and, eq, gt, inArray, or, sql, type InferSelectModel } from "drizzle-orm";
+import { blocks, getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 
 type Match = InferSelectModel<typeof matches>;
 
@@ -49,4 +49,56 @@ export async function releaseOrphanedMatchedRequests(userId?: string): Promise<s
     RETURNING rr.id
   `);
   return result.rows.map((row) => row.id as string);
+}
+
+/** True if either person has blocked the other. */
+export async function usersBlocked(a: string, b: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: blocks.id })
+    .from(blocks)
+    .where(
+      or(
+        and(eq(blocks.blockerId, a), eq(blocks.blockedId, b)),
+        and(eq(blocks.blockerId, b), eq(blocks.blockedId, a)),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * Ends an active (mutual) match on behalf of `byUserId` (an unmatch, or a block).
+ * The chat becomes read-only. The person who ended it goes straight back into the
+ * search (their trip reopens if their arrival window has not passed). The other
+ * person is NOT put back automatically, since we do not know they are still
+ * around: their trip is cancelled, and they are offered a choice to resume it
+ * (see POST /api/ride-requests/resume).
+ */
+export async function endMatch(match: Match, byUserId: string) {
+  const db = getDb();
+  const [updated] = await db
+    .update(matches)
+    .set({ status: "unmatched", updatedAt: new Date() })
+    .where(eq(matches.id, match.id))
+    .returning();
+
+  const bothIds = [match.rideRequestAId, match.rideRequestBId];
+  const [reopened] = await db
+    .update(rideRequests)
+    .set({ status: "open", updatedAt: new Date() })
+    .where(
+      and(
+        inArray(rideRequests.id, bothIds),
+        eq(rideRequests.userId, byUserId),
+        eq(rideRequests.status, "matched"),
+        gt(rideRequests.arrivalWindowEnd, new Date()),
+      ),
+    )
+    .returning({ id: rideRequests.id });
+  await db
+    .update(rideRequests)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(and(inArray(rideRequests.id, bothIds), eq(rideRequests.status, "matched")));
+
+  return { updated, reopenedRideRequestId: reopened?.id ?? null };
 }

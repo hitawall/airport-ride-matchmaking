@@ -1,4 +1,5 @@
 import "dart:async";
+import "package:flutter/foundation.dart";
 import "package:flutter/services.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:material_ui/material_ui.dart";
@@ -89,15 +90,27 @@ class NotificationController extends StateNotifier<NotificationState> {
     _seenMatchIds = raw == null || raw.isEmpty ? {} : raw.split(",").toSet();
   }
 
-  /// The rider has opened this match (chat or "it's a match" screen), so it
-  /// should never raise a "new match" alert again, and its unread count clears.
-  void markMatchSeen(String matchId) {
-    if (_seenMatchIds.add(matchId)) {
+  void _remember(String key) {
+    if (_seenMatchIds.add(key)) {
       final recent = _seenMatchIds.toList();
-      if (recent.length > 50) recent.removeRange(0, recent.length - 50);
+      if (recent.length > 100) recent.removeRange(0, recent.length - 100);
       _seenMatchIds = recent.toSet();
       _ref.read(secureStorageProvider).writeString("seen_matches", recent.join(","));
     }
+  }
+
+  /// The rider has seen that this match ended (they ended it, or the chat
+  /// showed them it ended), so no "match ended" alert is raised for it.
+  void markEndedSeen(String matchId) {
+    _remember("ended:$matchId");
+    _alertedMatchIds.add("ended:$matchId");
+    if (state.alert?.route == "/resume-trip") dismissAlert();
+  }
+
+  /// The rider has opened this match (chat or "it's a match" screen), so it
+  /// should never raise a "new match" alert again, and its unread count clears.
+  void markMatchSeen(String matchId) {
+    _remember(matchId);
     if (state.unreadByMatch.containsKey(matchId)) {
       final next = Map<String, int>.from(state.unreadByMatch)..remove(matchId);
       state = state.copyWith(unreadByMatch: next);
@@ -110,7 +123,8 @@ class NotificationController extends StateNotifier<NotificationState> {
     if (state.alert != null) state = state.copyWith(clearAlert: true);
   }
 
-  String get _location {
+  @visibleForOverriding
+  String get currentPath {
     try {
       return _ref.read(appRouterProvider).routerDelegate.currentConfiguration.uri.path;
     } catch (_) {
@@ -127,7 +141,7 @@ class NotificationController extends StateNotifier<NotificationState> {
     try {
       final data = await _ref.read(apiClientProvider).get("/api/notifications/summary") as Map<String, dynamic>;
       if (!mounted) return;
-      final location = _location;
+      final location = currentPath;
 
       // Unread messages. A chat that is open right now counts as read.
       final unread = <String, int>{};
@@ -182,8 +196,27 @@ class NotificationController extends StateNotifier<NotificationState> {
         );
       }
 
-      // One banner at a time; a match matters most, then likes, then messages.
-      final next = matchAlert ?? likeAlert ?? messageAlert;
+      // Matches that ended. The rider is asked whether to search again; they are
+      // never put back in the queue automatically, since we cannot know they are
+      // still around. An open chat shows its own prompt instead.
+      InAppAlert? endedAlert;
+      for (final item in (data["endedMatches"] as List? ?? const []).cast<Map<String, dynamic>>()) {
+        final id = item["id"] as String;
+        final key = "ended:$id";
+        if (_seenMatchIds.contains(key) || _alertedMatchIds.contains(key)) continue;
+        if (location == "/chat/$id") continue;
+        _alertedMatchIds.add(key);
+        endedAlert = _alert(
+          "Match ended",
+          "${item["counterpartName"]} ended the chat. Want to look for someone else?",
+          "Find someone else",
+          "/resume-trip",
+        );
+      }
+
+      // One banner at a time; a match matters most, then a match ending, then
+      // likes, then messages.
+      final next = matchAlert ?? endedAlert ?? likeAlert ?? messageAlert;
       state = NotificationState(
         unreadByMatch: unread,
         incomingLikes: likeCount,

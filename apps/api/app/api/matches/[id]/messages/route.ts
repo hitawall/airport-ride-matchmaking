@@ -5,6 +5,7 @@ import { getDb, chatMessages } from "@airport-ride-matchmaking/db";
 import { chatMessageCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
+import { usersBlocked } from "@/lib/matching";
 import { getPusher, matchChannelName } from "@/lib/pusher";
 // Generous enough for real conversation -- this is about stopping
 // brute-force/scripted abuse, not throttling normal chat.
@@ -46,7 +47,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       );
   }
 
-  return NextResponse.json({ messages });
+  return NextResponse.json({ messages, matchStatus: match.status });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -57,6 +58,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const match = await getMatchForParticipant(id, userId);
   if (!match) return jsonError("Match not found", 404);
   if (match.status !== "mutual") return jsonError("Chat is only available for mutual matches", 403);
+  const otherUserId = match.userAId === userId ? match.userBId : match.userAId;
+  if (await usersBlocked(userId, otherUserId)) return jsonError("This chat has ended", 403);
 
   const body = await request.json().catch(() => null);
   const parsed = chatMessageCreateSchema.safeParse(body);
