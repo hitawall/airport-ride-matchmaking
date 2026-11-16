@@ -1,6 +1,7 @@
 import "dart:async";
 import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
@@ -58,6 +59,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _loadingMessages = true;
   bool _sending = false;
   bool _safetyDismissed = false;
+  bool _endedByMe = false;
   late final String _channelName = "match-${widget.matchId}";
 
   bool get _isActive => _matchStatus == null || _matchStatus == "mutual";
@@ -129,7 +131,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _unmatch() async {
     final done = await unmatchAndFindAnother(context, ref, matchId: widget.matchId, name: _displayName);
-    if (done && mounted) setState(() => _matchStatus = "unmatched");
+    if (done && mounted) {
+      setState(() {
+        _endedByMe = true;
+        _matchStatus = "unmatched";
+      });
+    }
   }
 
   Future<void> _rate() => showRateMatchDialog(
@@ -194,8 +201,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (!confirmed || !mounted) return;
 
     try {
-      await ref.read(apiClientProvider).post("/api/blocks", {"blockedUserId": _counterpartUserId});
-      if (mounted) showAppSnack(context, "$_displayName is blocked.");
+      final result = await ref.read(apiClientProvider).post("/api/blocks", {"blockedUserId": _counterpartUserId});
+      if (!mounted) return;
+      final endedMatch = (result as Map<String, dynamic>)["endedMatchId"] != null;
+      if (endedMatch) {
+        ref.read(notificationsProvider.notifier).markEndedSeen(widget.matchId);
+        setState(() {
+          _endedByMe = true;
+          _matchStatus = "unmatched";
+        });
+      }
+      showAppSnack(context, "$_displayName is blocked.");
     } on ApiException catch (e) {
       if (mounted) showAppSnack(context, e.message, error: true);
     }
@@ -213,6 +229,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
           .toList();
       _addMessages(fetched);
+      // The other person may have ended the match while this chat was open.
+      final status = result["matchStatus"] as String?;
+      if (status != null && status != _matchStatus && mounted) {
+        setState(() => _matchStatus = status);
+        if (status == "unmatched") {
+          ref.read(notificationsProvider.notifier).markEndedSeen(widget.matchId);
+        }
+      }
     } on ApiException {
       // transient -- retried on the next tick
     }
@@ -306,7 +330,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                   ),
-                if (!_isActive)
+                if (_matchStatus == "unmatched" && !_endedByMe)
+                  // The other person ended it. We never put this rider back in
+                  // the queue on their own: they choose.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                    child: InfoBanner(
+                      tone: AppTone.info,
+                      icon: Icons.history,
+                      title: "$_displayName ended this match",
+                      message: "Want to look for someone else on your trip? You can still read your messages here.",
+                      action: TextButton(
+                        onPressed: () => context.go("/resume-trip"),
+                        child: const Text("Find someone else"),
+                      ),
+                    ),
+                  )
+                else if (!_isActive)
                   const Padding(
                     padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
                     child: InfoBanner(

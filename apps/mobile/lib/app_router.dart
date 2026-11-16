@@ -13,6 +13,7 @@ import "features/onboarding/otp_verify_screen.dart";
 import "features/profile/profile_setup_screen.dart";
 import "features/ride_request/awaiting_match_screen.dart";
 import "features/ride_request/create_ride_request_screen.dart";
+import "features/ride_request/resume_trip_screen.dart";
 import "features/ride_request/scan_boarding_pass_screen.dart";
 import "features/legal/delete_account_info_screen.dart";
 import "features/legal/legal_content.dart";
@@ -77,6 +78,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: "/chat/:id",
         builder: (context, state) => ChatScreen(matchId: state.pathParameters["id"]!),
       ),
+      GoRoute(path: "/resume-trip", builder: (context, state) => const ResumeTripScreen()),
       GoRoute(path: "/settings", builder: (context, state) => const SettingsScreen()),
     ],
   );

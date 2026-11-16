@@ -4,7 +4,7 @@ import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { matchActionSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
-import { findExistingMatch } from "@/lib/matching";
+import { findExistingMatch, usersBlocked } from "@/lib/matching";
 export async function POST(request: Request) {
   const userId = await requireUserId(request);
   if (userId instanceof NextResponse) return userId;
@@ -33,6 +33,10 @@ export async function POST(request: Request) {
   // whatever the client sends.
   if (!mine.terminal || mine.airportCode !== candidate.airportCode || mine.terminal !== candidate.terminal) {
     return jsonError("You can only match with people arriving at the same terminal", 409);
+  }
+
+  if (await usersBlocked(userId, candidate.userId)) {
+    return jsonError("You can't match with this person", 403);
   }
 
   const existing = await findExistingMatch(rideRequestId, candidateRideRequestId);

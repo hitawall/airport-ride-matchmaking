@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (userId instanceof NextResponse) return userId;
   const db = getDb();
 
-  const [unread, likes, mutual] = await Promise.all([
+  const [unread, likes, mutual, ended] = await Promise.all([
     db.execute(sql`
       SELECT cm.match_id, COUNT(*)::int AS count, p.display_name AS sender_name
       FROM chat_messages cm
@@ -56,6 +56,17 @@ export async function GET(request: Request) {
         AND m.updated_at > now() - make_interval(hours => ${NEW_MATCH_HOURS})
       ORDER BY m.updated_at DESC
     `),
+    // Matches that ended recently (unmatched by either person, or by a block).
+    // The app only alerts for ones this device has not seen end.
+    db.execute(sql`
+      SELECT m.id, p.display_name AS counterpart_name
+      FROM matches m
+      JOIN profiles p ON p.user_id = CASE WHEN m.user_a_id = ${userId} THEN m.user_b_id ELSE m.user_a_id END
+      WHERE m.status = 'unmatched'
+        AND (m.user_a_id = ${userId} OR m.user_b_id = ${userId})
+        AND m.updated_at > now() - make_interval(hours => ${NEW_MATCH_HOURS})
+      ORDER BY m.updated_at DESC
+    `),
   ]);
 
   const likeRow = likes.rows[0];
@@ -69,6 +80,10 @@ export async function GET(request: Request) {
       ? { rideRequestId: likeRow.ride_request_id as string, count: likeRow.count as number }
       : null,
     mutualMatches: mutual.rows.map((r) => ({
+      id: r.id as string,
+      counterpartName: r.counterpart_name as string,
+    })),
+    endedMatches: ended.rows.map((r) => ({
       id: r.id as string,
       counterpartName: r.counterpart_name as string,
     })),

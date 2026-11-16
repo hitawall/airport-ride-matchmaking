@@ -3,6 +3,7 @@ import "package:go_router/go_router.dart";
 import "package:material_ui/material_ui.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/notifications.dart";
 import "../../core/ui/dialogs.dart";
 
 /// Asks for confirmation, unmatches, and then puts the rider straight back into
@@ -24,6 +25,8 @@ Future<bool> unmatchAndFindAnother(
 
   try {
     final result = await ref.read(apiClientProvider).post("/api/matches/$matchId/unmatch") as Map<String, dynamic>;
+    // I ended it myself, so I should not also be told that it ended.
+    ref.read(notificationsProvider.notifier).markEndedSeen(matchId);
     if (!context.mounted) return true;
     final reopenedId = result["reopenedRideRequestId"] as String?;
     if (reopenedId != null) {
