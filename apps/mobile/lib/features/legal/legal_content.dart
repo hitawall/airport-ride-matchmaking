@@ -38,7 +38,7 @@ LegalDocument buildPrivacyPolicy() {
         "Matching: the people you like or pass on, your matches and how they end.",
         "Messages: what you send in a chat with a match.",
         "Safety and feedback: ratings you give, reports and blocks, and feedback you send us.",
-        "Technical: login codes (short-lived), and basic app, error and usage information that does not include your name, email, phone number or messages.",
+        "Technical: login codes (short-lived), crash reports, and basic usage information (for example that you opened the app, signed up, made a ride request or a match). This is tied to a random identifier, never to your name, email, phone number or message text. You can turn off the crash reports and app-opened signal in Settings.",
       ]),
       const LegalSection("What we do not collect", [
         "We do not read your device location, contacts or payment details. We never handle payments or bookings.",
@@ -55,7 +55,7 @@ LegalDocument buildPrivacyPolicy() {
         "To improve the app: fix errors and understand which parts are used, without identifying you.",
       ]),
       const LegalSection("Who we share it with", [
-        "We use trusted service providers to run the app: hosting and file storage (Vercel), our database (Neon), email delivery (Resend) and live chat updates (Pusher). They process data for us under their own terms and may store it outside India.",
+        "We use trusted service providers to run the app: hosting and file storage (Vercel), our database (Neon), email delivery (Resend), live chat updates (Pusher), and, to understand usage and fix crashes, a product analytics service and an error-tracking service that receive only the random identifier and the technical details described above. They process data for us under their own terms and may store it outside India.",
         "We do not sell your information and we do not use it for advertising.",
         "We may disclose information if the law requires it or to protect someone's safety.",
       ]),

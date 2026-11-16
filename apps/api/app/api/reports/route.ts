@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { getDb, reports } from "@airport-ride-matchmaking/db";
 import { reportCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
@@ -20,5 +21,6 @@ export async function POST(request: Request) {
     .values({ reporterId: userId, reportedId: reportedUserId, matchId, reason, details })
     .returning();
 
+  await track("report_filed", userId, { reason });
   return NextResponse.json(report, { status: 201 });
 }

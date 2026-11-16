@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { deleteAccount } from "@/lib/account-deletion";
 import { jsonError, requireUserId } from "@/lib/api-response";
 
@@ -8,6 +9,7 @@ export async function DELETE(request: Request) {
   if (userId instanceof NextResponse) return userId;
 
   const deleted = await deleteAccount(userId);
+  if (deleted) await track("account_deleted", userId);
   if (!deleted) return jsonError("Account not found", 404);
 
   return NextResponse.json({ ok: true });

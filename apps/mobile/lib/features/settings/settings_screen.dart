@@ -4,6 +4,7 @@ import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
+import "../../core/telemetry.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_card.dart";
 import "../../core/ui/app_page.dart";
@@ -24,6 +25,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _name;
   String? _photoUrl;
+  bool _shareUsage = Telemetry.enabled;
 
   @override
   void initState() {
@@ -117,6 +119,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SectionHeader("About"),
           _Group(
             children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.insights_outlined),
+                title: const Text("Share anonymous usage data"),
+                subtitle: const Text(
+                  "Crash reports and when the app is opened. Never your name, email, phone or messages.",
+                ),
+                value: _shareUsage,
+                onChanged: (value) async {
+                  setState(() => _shareUsage = value);
+                  await Telemetry.setEnabled(value);
+                },
+              ),
               _Row(
                 icon: Icons.privacy_tip_outlined,
                 title: "Privacy policy",

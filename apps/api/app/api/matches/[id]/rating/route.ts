@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { getDb, ratings } from "@airport-ride-matchmaking/db";
 import { ratingCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
@@ -26,6 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .insert(ratings)
       .values({ raterId: userId, ratedId, matchId: id, score: parsed.data.score })
       .returning();
+    await track("rating_given", userId, { score: parsed.data.score });
     return NextResponse.json(rating, { status: 201 });
   } catch (err) {
     const cause = err instanceof Error ? (err.cause as { code?: string } | undefined) : undefined;
