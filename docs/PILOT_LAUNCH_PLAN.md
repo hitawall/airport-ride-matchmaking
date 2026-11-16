@@ -7,6 +7,8 @@ from third-party comparison pages and move: confirm at checkout.
 
 ## 1. Domain
 
+**Chosen: `airpool.in`** (owner decision 2026-11-16). Web app on `airpool.in`, API on `api.airpool.in`, sending address like `login@airpool.in`. Android package id `in.airpool.app`.
+
 **What to buy:** one `.in` domain to start (cheap, credible for an India pilot),
 add the `.com` later only if the brand takes off. Registrar notes:
 
