@@ -117,13 +117,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onPressed: () => _openAndRefresh("/settings"),
         ),
       ],
-      bottomBar: (_loading || _hasActiveTrip)
-          ? null
-          : PrimaryButton(
-              label: "Find a ride partner",
-              icon: Icons.flight_land,
-              onPressed: () => context.go("/create-ride"),
-            ),
       body: _loading
           ? const SizedBox(height: 360, child: LoadingView())
           : Column(
@@ -150,6 +143,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: AppSpacing.lg),
                 ],
                 _buildTripCard(context, alerts),
+                // Right under the trip card, where the eye lands, not pinned out of sight at the bottom.
+                if (!_hasActiveTrip) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  PrimaryButton(
+                    label: "Find a ride partner",
+                    icon: Icons.flight_land,
+                    onPressed: () => context.go("/create-ride"),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 ActionTile(
                   icon: Icons.favorite_outline,
