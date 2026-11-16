@@ -7,7 +7,7 @@ import "../../core/app_theme.dart";
 import "../../core/bcbp_decoder.dart";
 import "../../core/ui/tokens.dart";
 
-/// Scans a boarding pass's PDF417/QR barcode (the IATA Bar Coded Boarding
+/// Scans a boarding pass's PDF417, QR or Aztec barcode (the IATA Bar Coded Boarding
 /// Pass format) and pops with the decoded flight number + date for the
 /// caller to pre-fill -- never submits anything on its own, since a scan can
 /// always be misread.
@@ -20,7 +20,9 @@ class ScanBoardingPassScreen extends StatefulWidget {
 
 class _ScanBoardingPassScreenState extends State<ScanBoardingPassScreen> {
   final _controller = MobileScannerController(
-    formats: [BarcodeFormat.pdf417, BarcodeFormat.qrCode],
+    // Paper passes use PDF417; phone, wallet and PDF passes use QR or Aztec
+    // (IndiGo, for one, prints Aztec).
+    formats: [BarcodeFormat.pdf417, BarcodeFormat.qrCode, BarcodeFormat.aztec],
   );
   Timer? _errorTimer;
   bool _handled = false;
