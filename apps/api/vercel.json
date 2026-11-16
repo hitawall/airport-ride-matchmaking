@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/ride-requests/sweep",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/internal/moderation/digest",
+      "schedule": "30 3 * * *"
     }
   ]
 }

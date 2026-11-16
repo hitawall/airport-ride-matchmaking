@@ -49,4 +49,20 @@ export const env = {
   get cronSecret() {
     return required("CRON_SECRET");
   },
+  /**
+   * Where the daily moderation digest of new reports is emailed. Optional:
+   * with it unset the digest job runs but sends nothing (see docs/MODERATION.md).
+   */
+  get moderationEmail(): string | undefined {
+    return process.env.MODERATION_EMAIL?.trim() || undefined;
+  },
+  /**
+   * Bearer token for the moderator actions (mark a report reviewed, remove an
+   * account). Optional: with it unset those endpoints refuse every request.
+   * Use a long random value, different from CRON_SECRET.
+   */
+  get moderationToken(): string | undefined {
+    const token = process.env.MODERATION_TOKEN?.trim();
+    return token && token.length >= 24 ? token : undefined;
+  },
 };
