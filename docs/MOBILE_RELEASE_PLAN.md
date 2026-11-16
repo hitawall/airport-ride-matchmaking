@@ -1,6 +1,30 @@
 # Plan: ship Airport Ride Matchmaking as a real Android app (iOS later)
 
-Status: planned, not started. Implement after the current bug-hunting is done. Last updated 2026-11-16.
+Last updated 2026-11-16.
+
+## Status
+
+**Done and merged (code ready for Android):**
+
+| Issue | What changed | Still needs you |
+|---|---|---|
+| #105 | Release manifest has INTERNET and optional camera; backups off. R8 and lint build errors fixed. CI now builds the Android release bundle on every PR and checks the merged manifest. | Nothing |
+| #106 | Release signing reads `android/key.properties`; CI checks the bundle is not debug-signed. See `docs/ANDROID_RELEASE_SIGNING.md`. | Create and back up the upload keystore; optionally add the 4 GitHub secrets |
+| #107 | `DELETE /api/account`, "Delete account" in Settings, public `/delete-account` page. Everything is hard-deleted, including reports filed against the user. | Link the `/delete-account` URL in the Play Data safety form once the web URL is final |
+| #109 | Gated review login (fixed 6-digit code for one email). See `docs/STORE_REVIEW_ACCOUNT.md`. | Set `REVIEW_ACCOUNT_EMAIL` and `REVIEW_ACCOUNT_CODE` in Vercel production, run the seed script, paste the credentials in Play "App access" |
+| #104 | Indian mobile validation (client and server) and a +91 country picker. | Nothing |
+
+Checked: Flutter 3.50 targets Android API 36 (min 24), which meets Google Play's target-level rule.
+
+**Waiting on you or on a decision (not started on purpose):**
+
+- #108 privacy policy and terms: needs your legal name or entity, a support email and your review of the wording.
+- #110 production email: needs the custom domain (#46), a verified Resend domain and Vercel env changes; do not leave `OTP_TEST_MODE=true` in production.
+- #111 app identity: needs the final display name, package ID and icon decisions.
+- #113 reports review and support contact: needs a support email and a decision on how you want to be notified.
+- Part 1 account tasks (Play Developer account, 12 testers, Android Studio).
+
+**Deferred by choice:** all iOS work (#112).
 
 Decisions: **Android first, iOS later** (deferred by choice; the owner has a Mac); **individual** developer accounts to start, with a possible later switch to a company (see Part 5).
 
