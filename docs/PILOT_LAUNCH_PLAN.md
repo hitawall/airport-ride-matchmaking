@@ -7,7 +7,9 @@ from third-party comparison pages and move: confirm at checkout.
 
 ## 1. Domain
 
-**Chosen: `airpool.in`** (owner decision 2026-11-16). Web app on `airpool.in`, API on `api.airpool.in`, sending address like `login@airpool.in`. Android package id `in.airpool.app`.
+**Chosen: `airpool.online`** (owner decision 2026-11-16; `airpool.in` was taken). Web app on `airpool.online`, API on `api.airpool.online`, sending address like `login@airpool.online`. Android package id `online.airpool.app`.
+
+`.online` costs about $1 in year one but renews at roughly $16-36 a year depending on the registrar (third-party trackers; confirm at checkout), and it looks less established than `.in` or `.com`. Fine for the pilot: set a renewal reminder and plan to move to a `.in` or `.com` if it works. Use the permanent domain for email and links from the start of any move.
 
 **What to buy:** one `.in` domain to start (cheap, credible for an India pilot),
 add the `.com` later only if the brand takes off. Registrar notes:
@@ -27,14 +29,14 @@ a quick trademark search (ipindiaservices.gov.in) before printing anything.
 
 | Name | Take |
 |---|---|
-| `airpool.in` | Short, says what it is, multi-airport friendly. My first pick |
+| `airpool.in` | Turned out to be taken (my DNS check was wrong). `airpool.online` was chosen instead |
 | `landandgo.in` | Friendly, memorable |
 | `sharecab.in` / `splitcab.in` | Descriptive, good for search |
 | `landedride.in`, `touchdownride.in`, `tarmacpool.in` | Brandable alternatives |
 | `blrpool.in`, `blrcab.in` | Avoid: ties the brand to one airport |
 
-Already taken: `airpool.com`, `airpool.app`, `airportpool.in`, `cabmate.in`, `ridebuddy.in`, `sharemycab.in`.
-If you pick `airpool.in`, the Android package id becomes `in.airpool.app` (the decision parked in OWNER_INPUTS B2).
+Already taken: `airpool.in`, `airpool.com`, `airpool.app`, `airportpool.in`, `cabmate.in`, `ridebuddy.in`, `sharemycab.in`.
+The chosen name `airpool.online` makes the Android package id `online.airpool.app` (OWNER_INPUTS B2).
 
 ## 2. What blocks a web pilot (do these first)
 
