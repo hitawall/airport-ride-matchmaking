@@ -3,6 +3,7 @@ import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError } from "@/lib/api-response";
 import { hasBearer } from "@/lib/moderation/auth";
+import { releaseOrphanedMatchedRequests } from "@/lib/matching";
 
 const EXPIRY_GRACE_HOURS = 4;
 // Generous on purpose -- people are often still coordinating logistics
@@ -55,9 +56,14 @@ async function handle(request: Request) {
       );
   }
 
+  // Catch-all: any "matched" request with no mutual match left, whatever the
+  // reason (see releaseOrphanedMatchedRequests).
+  const releasedOrphans = await releaseOrphanedMatchedRequests();
+
   return NextResponse.json({
     expiredCount: expired.length,
     expiredMatchCount: expiredMatches.rows.length,
+    releasedOrphanCount: releasedOrphans.length,
   });
 }
 

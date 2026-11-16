@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
+import { releaseOrphanedMatchedRequests } from "@/lib/matching";
 
 export async function GET(request: Request) {
   const userId = await requireUserId(request);
   if (userId instanceof NextResponse) return userId;
+
+  // Self-heal: free a "matched" request whose match has ended, so the rider is
+  // never stuck without a way to start a new trip.
+  await releaseOrphanedMatchedRequests(userId);
 
   const db = getDb();
   const [rideRequest] = await db
