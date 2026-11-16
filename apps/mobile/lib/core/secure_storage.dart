@@ -19,6 +19,11 @@ class SecureStorage {
     return (token, userId);
   }
 
+  /// Small non-secret values kept on this device (e.g. matches already seen).
+  Future<String?> readString(String key) => _storage.read(key: key);
+
+  Future<void> writeString(String key, String value) => _storage.write(key: key, value: value);
+
   Future<void> clearSession() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userIdKey);

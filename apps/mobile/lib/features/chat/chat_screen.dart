@@ -5,6 +5,7 @@ import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/notifications.dart";
 import "../../core/pusher_client.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/avatar.dart";
@@ -65,6 +66,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _inputController.addListener(() => setState(() {}));
+    // Opening a chat clears its unread count and any "new match" alert.
+    Future.microtask(() => ref.read(notificationsProvider.notifier).markMatchSeen(widget.matchId));
     _loadCounterpart();
     _poll();
     _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) => _poll());

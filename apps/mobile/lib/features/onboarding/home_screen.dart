@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/notifications.dart";
 import "../../core/ui/action_tile.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_card.dart";
@@ -105,6 +106,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final alerts = ref.watch(notificationsProvider);
 
     return AppPage(
       onRefresh: _load,
@@ -147,13 +149,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                 ],
-                _buildTripCard(context),
+                _buildTripCard(context, alerts),
                 const SizedBox(height: AppSpacing.lg),
                 ActionTile(
                   icon: Icons.favorite_outline,
                   tone: AppTone.safety,
                   title: "My matches",
-                  subtitle: "Active chats and past matches",
+                  subtitle: alerts.unreadTotal > 0
+                      ? "${alerts.unreadTotal} unread ${alerts.unreadTotal == 1 ? "message" : "messages"}"
+                      : "Active chats and past matches",
                   onTap: () => _openAndRefresh("/matches"),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -165,7 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildTripCard(BuildContext context) {
+  Widget _buildTripCard(BuildContext context, NotificationState alerts) {
     final ride = _ride;
     if (ride == null || !_hasActiveTrip) {
       return const EmptyTripCard();
@@ -187,7 +191,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              isMatched ? "Tap to open your chat" : "Tap to check status",
+              isMatched
+                  ? (alerts.unreadTotal > 0 ? "${alerts.unreadTotal} new — tap to open your chat" : "Tap to open your chat")
+                  : (alerts.incomingLikes > 0
+                      ? "${alerts.incomingLikes} ${alerts.incomingLikes == 1 ? "person likes" : "people like"} your trip — tap to review"
+                      : "Tap to check status"),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

@@ -5,6 +5,7 @@ import "app_router.dart";
 import "core/app_config.dart";
 import "core/app_theme.dart";
 import "core/auth_controller.dart";
+import "core/notifications.dart";
 import "core/telemetry.dart";
 
 Future<void> main() async {
@@ -46,6 +47,8 @@ class AirportRideMatchmakingApp extends ConsumerWidget {
       title: AppConfig.appName,
       theme: AppTheme.light(),
       routerConfig: router,
+      // Alerts (new message, someone liked your trip, new match) float over any screen.
+      builder: (context, child) => NotificationHost(child: child ?? const SizedBox.shrink()),
       // The default debug banner sits on top of the Settings icon in several
       // AppBars and absorbs its taps -- see issue #37.
       debugShowCheckedModeBanner: false,
