@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "airport-ride-matchmaking-web.vercel.app" }],
+      "destination": "https://airpool.online/$1",
+      "permanent": false
+    }
+  ]
+}

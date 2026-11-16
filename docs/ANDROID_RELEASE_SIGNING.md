@@ -26,7 +26,7 @@ keyPassword=YOUR_KEY_PASSWORD
 and put `upload-keystore.jks` in `apps/mobile/android/`. Then:
 
 ```bash
-flutter build appbundle --release --dart-define=API_BASE_URL=https://airport-ride-matchmaking-api.vercel.app --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
+flutter build appbundle --release --dart-define=API_BASE_URL=https://api.airpool.online --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
 ```
 
 Without `key.properties` the build falls back to the **debug** key and prints a warning. That is fine for `flutter run --release` on your own phone, but such a bundle must never be uploaded to Play.
