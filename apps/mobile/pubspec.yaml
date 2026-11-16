@@ -52,6 +52,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # NOTE: google_maps_flutter(_web) is deliberately NOT included yet --
 # GOOGLE_MAPS_API_KEY isn't provisioned. Destination entry uses a curated
@@ -99,3 +100,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Launcher icons. Source artwork is drawn by tool/generate_icons_test.dart (or
+# replace the files in assets/icon/ with designer artwork; see docs/APP_IDENTITY.md).
+flutter_launcher_icons:
+  android: ic_launcher
+  ios: true
+  image_path: assets/icon/icon.png
+  remove_alpha_ios: true
+  adaptive_icon_background: assets/icon/icon_background.png
+  adaptive_icon_foreground: assets/icon/icon_foreground.png
+  web:
+    generate: false

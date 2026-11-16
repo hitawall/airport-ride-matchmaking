@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The name shown under the launcher icon. Final store name is an owner
+         decision: see docs/APP_IDENTITY.md. Keep it short (about 12 characters
+         fit before it is cut off). -->
+    <string name="app_name">Airport Rides</string>
+</resources>
