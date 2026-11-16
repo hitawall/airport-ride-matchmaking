@@ -108,7 +108,6 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: "Flight number (optional)",
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
@@ -133,7 +132,6 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
                 labelText: "Destination locality",
                 hintText: "Search for your area",
                 prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
               ),
             ),
             optionsViewBuilder: (context, onSelected, options) => Align(

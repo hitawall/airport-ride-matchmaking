@@ -109,7 +109,6 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
               keyboardType: TextInputType.number,
               maxLength: 6,
               decoration: InputDecoration(
-                border: const OutlineInputBorder(),
                 errorText: _error,
                 labelText: "6-digit code",
               ),

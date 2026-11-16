@@ -31,7 +31,7 @@ void showSendFeedbackSheet(BuildContext context, ApiClient api) {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: "Type", border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: "Type"),
               items: const [
                 DropdownMenuItem(value: "feature_request", child: Text("Suggest a feature")),
                 DropdownMenuItem(value: "bug_report", child: Text("Report a bug")),
@@ -46,7 +46,6 @@ void showSendFeedbackSheet(BuildContext context, ApiClient api) {
               maxLength: 2000,
               decoration: const InputDecoration(
                 labelText: "Message",
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
