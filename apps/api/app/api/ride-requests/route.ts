@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     .limit(1);
   if (!profile?.profilePhotoUrl) {
     return jsonError(
-      "Add a profile photo before searching for a match -- it helps your match recognize you at pickup.",
+      "Add a profile photo before searching for a match. It helps your match recognize you at pickup.",
       403,
     );
   }

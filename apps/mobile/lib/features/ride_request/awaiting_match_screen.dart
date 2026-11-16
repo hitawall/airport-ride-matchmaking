@@ -5,6 +5,16 @@ import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/ui/app_buttons.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/boarding_pass_card.dart";
+import "../../core/ui/dialogs.dart";
+import "../../core/ui/formatters.dart";
+import "../../core/ui/horizon_scene.dart";
+import "../../core/ui/info_banner.dart";
+import "../../core/ui/state_views.dart";
+import "../../core/ui/tokens.dart";
+import "../../core/ui/tone.dart";
 import "../../data/models.dart";
 
 const _pollInterval = Duration(seconds: 12);
@@ -15,7 +25,7 @@ const _waitingQuips = [
   "Checking who else just touched down nearby...",
   "Good carpools are worth the wait.",
   "Somewhere out there, someone's luggage just hit the belt.",
-  "Still looking -- the airport is bigger than it feels right now.",
+  "New here? Matches grow with every traveler who joins.",
 ];
 
 class AwaitingMatchScreen extends ConsumerStatefulWidget {
@@ -31,25 +41,26 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   Timer? _pollTimer;
   Timer? _quipTimer;
   Timer? _tickTimer;
-  final _startedAt = DateTime.now();
+  DateTime _startedAt = DateTime.now();
   Duration _elapsed = Duration.zero;
   int _quipIndex = 0;
   bool _cancelling = false;
+  bool _connectionLost = false;
   String? _endedStatus;
+  RideRequest? _ride;
 
   @override
   void initState() {
     super.initState();
+    _loadRequest();
     _poll();
     _pollTimer = Timer.periodic(_pollInterval, (_) => _poll());
-    _quipTimer = Timer.periodic(
-      _quipInterval,
-      (_) => setState(() => _quipIndex = (_quipIndex + 1) % _waitingQuips.length),
-    );
-    _tickTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => setState(() => _elapsed = DateTime.now().difference(_startedAt)),
-    );
+    _quipTimer = Timer.periodic(_quipInterval, (_) {
+      if (mounted) setState(() => _quipIndex = (_quipIndex + 1) % _waitingQuips.length);
+    });
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsed = DateTime.now().difference(_startedAt));
+    });
   }
 
   @override
@@ -60,11 +71,28 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
     super.dispose();
   }
 
+  /// Fetches what was requested so the screen can show it, and so the timer
+  /// counts from when the request was created rather than from screen entry.
+  Future<void> _loadRequest() async {
+    try {
+      final json = await ref.read(apiClientProvider).get("/api/ride-requests/mine") as Map<String, dynamic>;
+      if (json["id"] != widget.rideRequestId || !mounted) return;
+      final createdAt = DateTime.tryParse(json["createdAt"] as String? ?? "");
+      setState(() {
+        _ride = RideRequest.fromJson(json);
+        if (createdAt != null) _startedAt = createdAt;
+      });
+    } on ApiException {
+      // The summary is a nicety; the search itself keeps working without it.
+    }
+  }
+
   Future<void> _poll() async {
     final api = ref.read(apiClientProvider);
     try {
       final result =
           await api.get("/api/ride-requests/${widget.rideRequestId}/candidates") as Map<String, dynamic>;
+      if (mounted && _connectionLost) setState(() => _connectionLost = false);
 
       final status = result["rideRequestStatus"] as String?;
       if (status != null && status != "open") {
@@ -88,159 +116,127 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
         context.go("/match-review/${widget.rideRequestId}", extra: candidates);
       }
     } on ApiException {
-      // transient failure -- just try again on the next tick
+      if (mounted) setState(() => _connectionLost = true);
     }
   }
 
   Future<void> _cancel() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Cancel this request?"),
-        content: const Text(
+    final confirmed = await confirmAction(
+      context,
+      title: "Cancel this request?",
+      message:
           "You'll stop showing up in other travelers' candidate lists and will need to "
           "create a new request to search again.",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Keep searching")),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Cancel request"),
-          ),
-        ],
-      ),
+      confirmLabel: "Cancel request",
+      cancelLabel: "Keep searching",
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _cancelling = true);
     try {
       final api = ref.read(apiClientProvider);
       await api.patch("/api/ride-requests/${widget.rideRequestId}", {"status": "cancelled"});
       if (mounted) context.go("/home");
-    } on ApiException {
-      if (mounted) setState(() => _cancelling = false);
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _cancelling = false);
+        showAppSnack(context, e.message, error: true);
+      }
     }
   }
 
   String get _elapsedLabel {
+    final hours = _elapsed.inHours;
     final minutes = _elapsed.inMinutes.remainder(60).toString().padLeft(2, "0");
     final seconds = _elapsed.inSeconds.remainder(60).toString().padLeft(2, "0");
-    return "$minutes:$seconds";
+    return hours > 0 ? "$hours:$minutes:$seconds" : "$minutes:$seconds";
   }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
     if (_endedStatus != null) {
-      return Scaffold(
-        appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Finding you a match")),
-        body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _endedStatus == "cancelled" ? Icons.cancel_outlined : Icons.timer_off_outlined,
-                size: 56,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _endedStatus == "cancelled"
-                    ? "This request was cancelled"
-                    : "This request has expired",
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _endedStatus == "cancelled"
-                    ? "You (or another session) cancelled this ride request. Start a new one "
-                          "whenever you're ready to look for a match again."
-                    : "Nobody matched within the arrival window, so this request stopped "
-                          "searching. Create a new one with an updated arrival time.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => context.go("/create-ride"),
-                child: const Text("Create a new request"),
-              ),
-            ],
+      final cancelled = _endedStatus == "cancelled";
+      return AppPage(
+        leading: homeLeadingButton(context),
+        title: "Your ride request",
+        body: SizedBox(
+          height: 420,
+          child: EmptyState(
+            icon: cancelled ? Icons.cancel_outlined : Icons.timer_off_outlined,
+            title: cancelled ? "This request was cancelled" : "This request has expired",
+            message: cancelled
+                ? "You (or another session) cancelled this ride request. Start a new one "
+                      "whenever you're ready to look for a match again."
+                : "Nobody matched within the arrival window, so this request stopped "
+                      "searching. Create a new one with an updated arrival time.",
+            actionLabel: "Create a new request",
+            onAction: () => context.go("/create-ride"),
           ),
         ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Finding you a match")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 96,
-              width: 96,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const SizedBox(height: 96, width: 96, child: CircularProgressIndicator(strokeWidth: 3)),
-                  Text(
-                    _elapsedLabel,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
+    final ride = _ride;
+    return AppPage(
+      leading: homeLeadingButton(context),
+      title: "Finding your ride buddy",
+      bottomBar: SecondaryButton(label: "Cancel this request", loading: _cancelling, onPressed: _cancel),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_connectionLost) ...[
+            const InfoBanner(
+              tone: AppTone.warning,
+              icon: Icons.wifi_off_outlined,
+              title: "Connection lost",
+              message: "We'll keep trying. Your request is still active.",
             ),
-            const SizedBox(height: 24),
-            const Text(
-              "Finding your ride buddy",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: Text(
-                _waitingQuips[_quipIndex],
-                key: ValueKey(_quipIndex),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Early days -- if you're one of the first people trying this out, there may "
-              "not be anyone to match with yet. That's expected, not a bug.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Card(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  "Safety tip: always meet your match at the official airport "
-                  "pickup zone, and verify their profile photo before you share a cab.",
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: _cancelling ? null : _cancel,
-              child: _cancelling
-                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text("Cancel this request"),
-            ),
+            const SizedBox(height: AppSpacing.lg),
           ],
-        ),
+          const HorizonScene(height: 170, animated: true),
+          const SizedBox(height: AppSpacing.xl),
+          Center(
+            child: Text(
+              _elapsedLabel,
+              style: textTheme.displaySmall?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          Center(child: Text("searching so far", style: textTheme.bodySmall)),
+          const SizedBox(height: AppSpacing.md),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: Text(
+              _waitingQuips[_quipIndex],
+              key: ValueKey(_quipIndex),
+              textAlign: TextAlign.center,
+              style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          if (ride != null) ...[
+            BoardingPassCard(
+              caption: "YOUR REQUEST",
+              destination: ride.destinationLocalityLabel,
+              timeCaption: "LEAVING THE AIRPORT",
+              timeLabel: formatFriendlyDateTime(ride.flightArrivalAt),
+              flight: ride.flightNumber,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          const InfoBanner(
+            tone: AppTone.safety,
+            title: "Stay safe",
+            message:
+                "Meet your match at the official airport pickup zone, and check their profile "
+                "photo before you share a cab.",
+          ),
+        ],
       ),
     );
   }

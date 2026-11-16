@@ -2,9 +2,17 @@ import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
+import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/bcbp_decoder.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/ui/app_buttons.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/dialogs.dart";
+import "../../core/ui/formatters.dart";
+import "../../core/ui/info_banner.dart";
+import "../../core/ui/tokens.dart";
+import "../../core/ui/tone.dart";
 import "../../data/bengaluru_localities.dart";
 
 class CreateRideRequestScreen extends ConsumerStatefulWidget {
@@ -16,16 +24,29 @@ class CreateRideRequestScreen extends ConsumerStatefulWidget {
 
 class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScreen> {
   final _flightController = TextEditingController();
+  final _timeController = TextEditingController();
   Locality? _destination;
   DateTime? _arrivalAt;
+  // The date read from a scanned boarding pass; the time still has to be
+  // confirmed by the user, so it only seeds the date picker.
+  DateTime? _scannedDate;
   bool _loading = false;
   String? _error;
+  String? _destinationError;
+  String? _timeError;
   bool _missingPhoto = false;
+
+  @override
+  void dispose() {
+    _flightController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickArrivalTime() async {
     final now = DateTime.now();
     final lastAllowed = now.add(const Duration(days: 30));
-    var initial = _arrivalAt ?? now;
+    var initial = _arrivalAt ?? _scannedDate ?? now;
     if (initial.isBefore(now)) initial = now;
     if (initial.isAfter(lastAllowed)) initial = lastAllowed;
 
@@ -34,11 +55,21 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
       initialDate: initial,
       firstDate: now,
       lastDate: lastAllowed,
+      helpText: "Which day do you land?",
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+      helpText: "When do you expect to leave the airport?",
+    );
     if (time == null) return;
-    setState(() => _arrivalAt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    final value = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    setState(() {
+      _arrivalAt = value;
+      _timeController.text = formatFriendlyDateTime(value);
+      _timeError = null;
+    });
   }
 
   Future<void> _scanBoardingPass() async {
@@ -46,27 +77,31 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     if (result == null || !mounted) return;
     setState(() {
       _flightController.text = result.carrierFlightNumber;
-      _arrivalAt = DateTime(result.flightDate.year, result.flightDate.month, result.flightDate.day, 12);
+      _scannedDate = result.flightDate;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Flight number and date filled in -- please confirm the time below.")),
-    );
+    showAppSnack(context, "Flight ${result.carrierFlightNumber} filled in. Now confirm when you'll leave the airport.");
+    await _pickArrivalTime();
   }
 
-  Future<void> _submit() async {
-    if (_destination == null) {
-      setState(() => _error = "Choose your destination");
-      return;
-    }
-    if (_arrivalAt == null) {
-      setState(() => _error = "Choose when you plan to depart the airport");
-      return;
-    }
+  Future<void> _addPhoto() async {
+    await context.push("/profile-setup");
+    if (!mounted) return;
     setState(() {
-      _loading = true;
       _error = null;
       _missingPhoto = false;
     });
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _error = null;
+      _missingPhoto = false;
+      _destinationError = _destination == null ? "Choose your destination from the list" : null;
+      _timeError = _arrivalAt == null ? "Choose when you plan to leave the airport" : null;
+    });
+    if (_destination == null || _arrivalAt == null) return;
+
+    setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
       final flightNumber = _flightController.text.trim();
@@ -92,117 +127,152 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: homeLeadingButton(context),
-        title: const Text("Where are you headed?"),
-        actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () => context.push("/settings")),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
+    return AppPage(
+      leading: homeLeadingButton(context),
+      title: "Where are you headed?",
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: "Settings",
+          onPressed: () => context.push("/settings"),
+        ),
+      ],
+      bottomBar: PrimaryButton(label: "Find a match", loading: _loading, onPressed: _submit),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _StepLabel(number: 1, text: "Your flight"),
           TextField(
             controller: _flightController,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: "Flight number (optional)",
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: _scanBoardingPass,
-            icon: const Icon(Icons.document_scanner_outlined),
-            label: const Text("Scan boarding pass instead"),
-          ),
-          const SizedBox(height: 16),
-          Autocomplete<Locality>(
-            optionsBuilder: (value) {
-              if (value.text.isEmpty) return bengaluruLocalities;
-              final query = value.text.toLowerCase();
-              return bengaluruLocalities.where((l) => l.label.toLowerCase().contains(query));
-            },
-            displayStringForOption: (l) => l.label,
-            onSelected: (l) => setState(() => _destination = l),
-            fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) => TextField(
-              controller: controller,
-              focusNode: focusNode,
-              decoration: const InputDecoration(
-                labelText: "Destination locality",
-                hintText: "Search for your area",
-                prefixIcon: Icon(Icons.search),
+              helperText: "Or scan your boarding pass to fill it in",
+              prefixIcon: const Icon(Icons.flight_land_outlined),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.document_scanner_outlined),
+                tooltip: "Scan boarding pass",
+                onPressed: _scanBoardingPass,
               ),
             ),
-            optionsViewBuilder: (context, onSelected, options) => Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 280, minWidth: 280),
-                  child: ListView.builder(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    itemCount: options.length,
-                    itemBuilder: (context, i) {
-                      final option = options.elementAt(i);
-                      return ListTile(
-                        title: Text(option.label),
-                        onTap: () => onSelected(option),
-                      );
-                    },
+          ),
+          const _StepLabel(number: 2, text: "Where to?"),
+          LayoutBuilder(
+            builder: (context, constraints) => Autocomplete<Locality>(
+              optionsBuilder: (value) {
+                if (value.text.isEmpty) return bengaluruLocalities;
+                final query = value.text.toLowerCase();
+                return bengaluruLocalities.where((l) => l.label.toLowerCase().contains(query));
+              },
+              displayStringForOption: (l) => l.label,
+              onSelected: (l) => setState(() {
+                _destination = l;
+                _destinationError = null;
+              }),
+              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) => TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: (text) {
+                  if (_destination != null && text != _destination!.label) {
+                    setState(() => _destination = null);
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: "Destination area",
+                  hintText: "Search for your area",
+                  prefixIcon: const Icon(Icons.place_outlined),
+                  errorText: _destinationError,
+                ),
+              ),
+              optionsViewBuilder: (context, onSelected, options) => Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Material(
+                    elevation: 4,
+                    color: AppTheme.surfaceWhite,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                      side: const BorderSide(color: AppTheme.line),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: 280,
+                        minWidth: constraints.maxWidth,
+                        maxWidth: constraints.maxWidth,
+                      ),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        itemBuilder: (context, i) {
+                          final option = options.elementAt(i);
+                          return ListTile(
+                            leading: const Icon(Icons.place_outlined),
+                            title: Text(option.label),
+                            onTap: () => onSelected(option),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Material(
-            color: Theme.of(context).inputDecorationTheme.fillColor,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _pickArrivalTime,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _arrivalAt == null
-                            ? "When do you plan to depart from the airport?"
-                            : "Departing ${_arrivalAt!.toLocal()}".split(".").first,
-                      ),
-                    ),
-                    const Icon(Icons.schedule),
-                  ],
-                ),
-              ),
+          const _StepLabel(number: 3, text: "When do you leave the airport?"),
+          TextField(
+            controller: _timeController,
+            readOnly: true,
+            onTap: _pickArrivalTime,
+            decoration: InputDecoration(
+              labelText: "Pickup time",
+              hintText: "Pick a day and time",
+              prefixIcon: const Icon(Icons.schedule),
+              suffixIcon: const Icon(Icons.expand_more),
+              errorText: _timeError,
             ),
           ),
           if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            if (_missingPhoto) ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => context.push("/profile-setup"),
-                icon: const Icon(Icons.add_a_photo_outlined),
-                label: const Text("Add profile photo"),
-              ),
-            ],
+            const SizedBox(height: AppSpacing.xl),
+            InfoBanner(
+              tone: _missingPhoto ? AppTone.warning : AppTone.error,
+              icon: _missingPhoto ? Icons.photo_camera_outlined : null,
+              title: _missingPhoto ? "Add a profile photo first" : null,
+              message: _error!,
+              action: _missingPhoto ? TextButton(onPressed: _addPhoto, child: const Text("Add photo")) : null,
+            ),
           ],
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _loading ? null : _submit,
-            child: _loading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text("Find a match"),
-                  ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepLabel extends StatelessWidget {
+  const _StepLabel({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: scheme.primaryContainer,
+            child: Text(
+              "$number",
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onPrimaryContainer),
+            ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(text, style: Theme.of(context).textTheme.titleSmall),
         ],
       ),
     );
