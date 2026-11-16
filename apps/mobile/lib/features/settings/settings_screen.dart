@@ -13,6 +13,7 @@ import "../../core/ui/dialogs.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../feedback/send_feedback_sheet.dart";
+import "../install/install.dart";
 import "../support/support_sheet.dart";
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -67,6 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final api = ref.watch(apiClientProvider);
+    final installKind = ref.watch(installKindProvider);
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
@@ -119,6 +121,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SectionHeader("About"),
           _Group(
             children: [
+              if (installKind != InstallKind.none)
+                _Row(
+                  icon: Icons.install_mobile_outlined,
+                  title: "Add to home screen",
+                  onTap: () => startInstall(context, installKind),
+                ),
               SwitchListTile(
                 secondary: const Icon(Icons.insights_outlined),
                 title: const Text("Share anonymous usage data"),

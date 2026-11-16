@@ -19,6 +19,7 @@ import "../../core/ui/tone.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../feedback/send_feedback_sheet.dart";
+import "../install/install.dart";
 
 /// The landing screen after login. Shows a greeting and the user's current
 /// trip. A missing profile is the one case that still auto-redirects
@@ -166,6 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _FeedbackCallout(
                   onTap: () => showSendFeedbackSheet(context, ref.read(apiClientProvider)),
                 ),
+                const InstallBanner(),
               ],
             ),
     );
