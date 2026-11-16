@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
@@ -35,5 +36,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       ),
     );
 
+  await track("match_unmatched", userId);
   return NextResponse.json(updated);
 }

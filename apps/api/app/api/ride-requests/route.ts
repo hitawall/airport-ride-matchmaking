@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, eq } from "drizzle-orm";
 import { getDb, profiles, rideRequests } from "@airport-ride-matchmaking/db";
 import { rideRequestCreateSchema } from "@/lib/schemas";
@@ -65,5 +66,6 @@ export async function POST(request: Request) {
     })
     .returning();
 
+  await track("ride_request_created", userId, { has_flight_number: !!parsed.data.flightNumber });
   return NextResponse.json(rideRequest, { status: 201 });
 }

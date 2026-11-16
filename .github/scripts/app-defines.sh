@@ -15,5 +15,11 @@ for name in APP_NAME OPERATOR_NAME SUPPORT_EMAIL GRIEVANCE_OFFICER LEGAL_JURISDI
   fi
 done
 
+# Release identifier attached to crash reports and usage events, e.g. 1.0.0+3.
+version=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | tr -d '\r')
+if [ -n "$version" ]; then
+  json=$(printf '%s' "$json" | jq --arg v "$version" '. + {APP_VERSION: $v}')
+fi
+
 printf '%s\n' "$json" > app-defines.json
 echo "Wrote app-defines.json with: $(printf '%s' "$json" | jq -r 'keys | join(", ")')"

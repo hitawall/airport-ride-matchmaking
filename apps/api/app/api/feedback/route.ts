@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb, feedback } from "@airport-ride-matchmaking/db";
 import { feedbackCreateSchema } from "@/lib/schemas";
@@ -29,5 +30,6 @@ export async function POST(request: Request) {
     .values({ userId, type: parsed.data.type, message: parsed.data.message })
     .returning();
 
+  await track("feedback_submitted", userId);
   return NextResponse.json(row, { status: 201 });
 }

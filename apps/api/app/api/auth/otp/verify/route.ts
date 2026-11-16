@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, desc, eq, gt } from "drizzle-orm";
 import { getDb, otpRequests, users } from "@airport-ride-matchmaking/db";
 import { otpVerifySchema } from "@/lib/schemas";
@@ -54,5 +55,7 @@ export async function POST(request: Request) {
     : (await db.insert(users).values({ email, emailVerified: true }).returning())[0];
 
   const token = await issueToken(user.id);
+  if (isNewUser) await track("account_created", user.id);
+  await track("otp_verified", user.id, { is_new_user: isNewUser });
   return NextResponse.json({ token, userId: user.id, isNewUser });
 }

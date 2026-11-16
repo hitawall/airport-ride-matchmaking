@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
 import { getDb, chatMessages } from "@airport-ride-matchmaking/db";
 import { chatMessageCreateSchema } from "@/lib/schemas";
@@ -76,5 +77,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     console.error("Pusher trigger failed", err);
   }
 
+  await track("message_sent", userId);
   return NextResponse.json(message, { status: 201 });
 }

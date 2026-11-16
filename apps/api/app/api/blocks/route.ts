@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, eq } from "drizzle-orm";
 import { getDb, blocks } from "@airport-ride-matchmaking/db";
 import { blockCreateSchema } from "@/lib/schemas";
@@ -28,5 +29,6 @@ export async function POST(request: Request) {
     .values({ blockerId: userId, blockedId: blockedUserId })
     .returning();
 
+  await track("block_created", userId);
   return NextResponse.json(block, { status: 201 });
 }

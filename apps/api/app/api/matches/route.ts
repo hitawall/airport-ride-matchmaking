@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/telemetry";
 import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { matchActionSchema } from "@/lib/schemas";
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
             status: "rejected",
           })
           .returning();
+    await track("match_pass", userId);
     return NextResponse.json(row);
   }
 
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
         respondedAtA: new Date(),
       })
       .returning();
+    await track("match_like", userId);
     return NextResponse.json(row, { status: 201 });
   }
 
@@ -112,6 +115,8 @@ export async function POST(request: Request) {
         ),
       );
 
+    await track("match_like", userId);
+    await track("mutual_match_created", userId);
     return NextResponse.json(mutualRow);
   }
 
