@@ -12,6 +12,7 @@ import "../../core/ui/dialogs.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../feedback/send_feedback_sheet.dart";
+import "../support/support_sheet.dart";
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -109,6 +110,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.forum_outlined,
                 title: "Send feedback",
                 onTap: () => showSendFeedbackSheet(context, api),
+              ),
+              _Row(icon: Icons.support_agent, title: "Contact support", onTap: () => showSupportSheet(context)),
+            ],
+          ),
+          const SectionHeader("About"),
+          _Group(
+            children: [
+              _Row(
+                icon: Icons.privacy_tip_outlined,
+                title: "Privacy policy",
+                onTap: () => context.push("/privacy"),
+              ),
+              _Row(
+                icon: Icons.description_outlined,
+                title: "Terms of service",
+                onTap: () => context.push("/terms"),
               ),
             ],
           ),

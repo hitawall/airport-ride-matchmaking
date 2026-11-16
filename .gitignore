@@ -44,3 +44,4 @@ coverage/
 # Turborepo
 .turbo/
 *.tsbuildinfo
+app-defines.json

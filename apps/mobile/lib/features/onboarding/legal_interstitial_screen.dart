@@ -16,9 +16,36 @@ class LegalInterstitialScreen extends StatelessWidget {
     return AppPage(
       showAppBar: false,
       centered: true,
-      bottomBar: PrimaryButton(
-        label: "I understand, continue",
-        onPressed: () => context.go("/email"),
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PrimaryButton(
+            label: "I understand, continue",
+            onPressed: () => context.go("/email"),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                "By continuing you accept our",
+                style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              TextButton(
+                onPressed: () => context.push("/terms"),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                child: const Text("Terms"),
+              ),
+              Text("and", style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              TextButton(
+                onPressed: () => context.push("/privacy"),
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                child: const Text("Privacy policy"),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
