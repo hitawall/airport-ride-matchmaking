@@ -5,6 +5,7 @@ import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { matchActionSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { findExistingMatch } from "@/lib/matching";
+import { notifyMutualMatch } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   const userId = await requireUserId(request);
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
 
     await track("match_like", userId);
     await track("mutual_match_created", userId);
+    notifyMutualMatch(mutualRow.id);
     return NextResponse.json(mutualRow);
   }
 

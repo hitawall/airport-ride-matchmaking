@@ -6,6 +6,7 @@ import { chatMessageCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
 import { getPusher, matchChannelName } from "@/lib/pusher";
+import { notifyNewMessage } from "@/lib/notifications";
 
 // Generous enough for real conversation -- this is about stopping
 // brute-force/scripted abuse, not throttling normal chat.
@@ -78,5 +79,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   await track("message_sent", userId);
+  notifyNewMessage(id, userId, message.id);
   return NextResponse.json(message, { status: 201 });
 }

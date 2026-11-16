@@ -38,6 +38,7 @@ LegalDocument buildPrivacyPolicy() {
         "Matching: the people you like or pass on, your matches and how they end.",
         "Messages: what you send in a chat with a match.",
         "Safety and feedback: ratings you give, reports and blocks, and feedback you send us.",
+        "Service emails: when you get a match or a new message we email you a short notice with a link. It never contains your message text. You will not get marketing email from us.",
         "Technical: login codes (short-lived), crash reports, and basic usage information (for example that you opened the app, signed up, made a ride request or a match). This is tied to a random identifier, never to your name, email, phone number or message text. You can turn off the crash reports and app-opened signal in Settings.",
       ]),
       const LegalSection("What we do not collect", [
