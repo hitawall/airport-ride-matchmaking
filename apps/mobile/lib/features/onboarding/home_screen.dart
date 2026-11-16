@@ -3,12 +3,24 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/ui/action_tile.dart";
+import "../../core/ui/app_buttons.dart";
+import "../../core/ui/app_card.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/boarding_pass_card.dart";
+import "../../core/ui/formatters.dart";
+import "../../core/ui/horizon_scene.dart";
+import "../../core/ui/info_banner.dart";
+import "../../core/ui/state_views.dart";
+import "../../core/ui/status_pill.dart";
+import "../../core/ui/tokens.dart";
+import "../../core/ui/tone.dart";
+import "../../data/models.dart";
 import "../feedback/send_feedback_sheet.dart";
 
-/// The landing screen after login. Shows a welcome summary and the status of
-/// the user's most recent ride request, with an action to match. A missing
-/// profile is the one case that still auto-redirects (mandatory onboarding
-/// gate); everything else is a user-initiated choice, not a forced redirect.
+/// The landing screen after login. Shows a greeting and the user's current
+/// trip. A missing profile is the one case that still auto-redirects
+/// (mandatory onboarding gate); everything else is a user-initiated choice.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,8 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _loading = true;
   String? _error;
   String? _displayName;
-  String? _rideRequestStatus;
-  String? _rideRequestId;
+  RideRequest? _ride;
   String? _activeMatchId;
 
   @override
@@ -32,156 +43,195 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _load() async {
     final api = ref.read(apiClientProvider);
+    String? error;
+    String? name = _displayName;
+    RideRequest? ride;
+    String? matchId;
 
     try {
       final profile = await api.get("/api/profile/me") as Map<String, dynamic>;
-      if (!mounted) return;
-      setState(() => _displayName = profile["displayName"] as String?);
+      name = profile["displayName"] as String?;
     } on ApiException catch (e) {
       if (e.statusCode == 404) {
         if (mounted) context.go("/profile-setup");
         return;
       }
-      if (mounted) setState(() => _error = e.message);
+      error = e.message;
     }
 
     try {
-      final rideRequest = await api.get("/api/ride-requests/mine") as Map<String, dynamic>;
-      if (!mounted) return;
-      setState(() {
-        _rideRequestStatus = rideRequest["status"] as String;
-        _rideRequestId = rideRequest["id"] as String;
-      });
+      ride = RideRequest.fromJson(await api.get("/api/ride-requests/mine") as Map<String, dynamic>);
     } on ApiException catch (e) {
-      if (e.statusCode != 404) {
-        if (mounted) setState(() => _error = e.message);
-      }
-      // 404 -- no ride request yet, leave status null.
+      // 404 means no ride request yet.
+      if (e.statusCode != 404) error = e.message;
     }
 
-    if (_rideRequestStatus == "matched") {
+    if (ride?.status == "matched") {
       try {
         final result = await api.get("/api/matches/mine") as Map<String, dynamic>;
         final matches = (result["matches"] as List).cast<Map<String, dynamic>>();
         final mutual = matches.where((m) => m["status"] == "mutual").toList();
-        if (mounted && mutual.isNotEmpty) {
-          setState(() => _activeMatchId = mutual.first["id"] as String);
-        }
+        if (mutual.isNotEmpty) matchId = mutual.first["id"] as String;
       } on ApiException catch (e) {
-        if (mounted) setState(() => _error = e.message);
+        error = e.message;
       }
     }
 
-    if (mounted) setState(() => _loading = false);
+    if (!mounted) return;
+    setState(() {
+      _displayName = name;
+      _ride = ride;
+      _activeMatchId = matchId;
+      _error = error;
+      _loading = false;
+    });
   }
+
+  /// Pushed screens (settings, matches) can change the trip, e.g. cancelling
+  /// a request, so reload when the user comes back.
+  Future<void> _openAndRefresh(String location) async {
+    await context.push(location);
+    if (mounted) _load();
+  }
+
+  bool get _hasActiveTrip => _ride?.status == "open" || _ride?.status == "matched";
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Airport Ride Matchmaking"),
-        actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () => context.push("/settings")),
-        ],
-      ),
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return AppPage(
+      onRefresh: _load,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: "Settings",
+          onPressed: () => _openAndRefresh("/settings"),
+        ),
+      ],
+      bottomBar: (_loading || _hasActiveTrip)
+          ? null
+          : PrimaryButton(
+              label: "Find a ride partner",
+              icon: Icons.flight_land,
+              onPressed: () => context.go("/create-ride"),
+            ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () {
-                setState(() => _loading = true);
-                return _load();
-              },
-              child: LayoutBuilder(
-                builder: (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(
-                            Icons.flight_takeoff,
-                            size: 36,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _displayName != null ? "Hi, $_displayName" : "Welcome",
-                          style: Theme.of(context).textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Let's get you a ride buddy for the trip out of the airport.",
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 28),
-                        if (_error != null) ...[
-                          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                          const SizedBox(height: 16),
-                        ],
-                        _buildStatusCard(context),
-                        const SizedBox(height: 16),
-                        _HomeTile(
-                          icon: Icons.favorite_outline,
-                          iconBackground: Theme.of(context).colorScheme.tertiaryContainer,
-                          iconColor: Theme.of(context).colorScheme.onTertiaryContainer,
-                          title: "My matches",
-                          subtitle: "Active chats and past matches",
-                          onTap: () => context.push("/matches"),
-                        ),
-                        const SizedBox(height: 16),
-                        _FeedbackCallout(
-                          onTap: () =>
-                              showSendFeedbackSheet(context, ref.read(apiClientProvider)),
-                        ),
-                      ],
-                    ),
-                  ),
+          ? const SizedBox(height: 360, child: LoadingView())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const HorizonScene(height: 150),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  _displayName != null ? "Hi, $_displayName" : "Welcome",
+                  style: textTheme.headlineMedium,
                 ),
-              ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _hasActiveTrip ? "Here's where your ride stands." : "Where to after you land?",
+                  style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                if (_error != null) ...[
+                  InfoBanner(
+                    tone: AppTone.error,
+                    message: _error!,
+                    action: TextButton(onPressed: _load, child: const Text("Retry")),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                _buildTripCard(context),
+                const SizedBox(height: AppSpacing.lg),
+                ActionTile(
+                  icon: Icons.favorite_outline,
+                  tone: AppTone.safety,
+                  title: "My matches",
+                  subtitle: "Active chats and past matches",
+                  onTap: () => _openAndRefresh("/matches"),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _FeedbackCallout(
+                  onTap: () => showSendFeedbackSheet(context, ref.read(apiClientProvider)),
+                ),
+              ],
             ),
     );
   }
 
-  Widget _buildStatusCard(BuildContext context) {
-    switch (_rideRequestStatus) {
-      case "open":
-        return _HomeTile(
-          icon: Icons.hourglass_top,
-          iconBackground: Theme.of(context).colorScheme.secondaryContainer,
-          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
-          title: "Looking for your match",
-          subtitle: "We're checking for travelers heading your way",
-          trailingLabel: "Check status",
-          onTap: () => context.go("/awaiting-match/$_rideRequestId"),
-        );
-      case "matched":
-        return _HomeTile(
-          icon: Icons.celebration_outlined,
-          iconBackground: Theme.of(context).colorScheme.primaryContainer,
-          iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-          title: "You have a match!",
-          subtitle: "Coordinate meeting at the pickup zone",
-          trailingLabel: "Open chat",
-          onTap: _activeMatchId == null ? null : () => context.go("/chat/$_activeMatchId"),
-        );
-      default:
-        return _HomeTile(
-          icon: Icons.flight_land,
-          iconBackground: Theme.of(context).colorScheme.secondaryContainer,
-          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
-          title: "Ready to find a ride partner?",
-          subtitle: "Tell us your flight and destination",
-          trailingLabel: "Start",
-          onTap: () => context.go("/create-ride"),
-        );
+  Widget _buildTripCard(BuildContext context) {
+    final ride = _ride;
+    if (ride == null || !_hasActiveTrip) {
+      return const EmptyTripCard();
     }
+    final isMatched = ride.status == "matched";
+    return BoardingPassCard(
+      caption: isMatched ? "YOU HAVE A MATCH" : "LOOKING FOR YOUR MATCH",
+      destination: ride.destinationLocalityLabel,
+      timeCaption: "LEAVING THE AIRPORT",
+      timeLabel: formatFriendlyDateTime(ride.flightArrivalAt),
+      flight: ride.flightNumber,
+      footer: Row(
+        children: [
+          StatusPill(
+            isMatched ? "Matched" : "Searching",
+            tone: isMatched ? AppTone.success : AppTone.info,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              isMatched ? "Tap to open your chat" : "Tap to check status",
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () {
+        if (isMatched) {
+          context.go(_activeMatchId == null ? "/matches" : "/chat/$_activeMatchId");
+        } else {
+          context.go("/awaiting-match/${ride.id}");
+        }
+      },
+    );
+  }
+}
+
+/// Shown when there is no open or matched request: a gentle nudge rather
+/// than a bare empty area. The pinned button below carries the action.
+class EmptyTripCard extends StatelessWidget {
+  const EmptyTripCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      color: scheme.primaryContainer,
+      child: Row(
+        children: [
+          Icon(Icons.flight_land, size: 32, color: scheme.onPrimaryContainer),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "No ride planned yet",
+                  style: textTheme.titleMedium?.copyWith(color: scheme.onPrimaryContainer),
+                ),
+                Text(
+                  "Tell us your flight and where you're headed. We'll find someone going your way.",
+                  style: textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -189,7 +239,7 @@ const _feedbackQuips = [
   "Found a bug? Got a wild idea? We want to hear it.",
   "Tell us what's awkward. We'll pretend we meant to do that.",
   "Your 30-second rant could become next week's feature.",
-  "Loved it, hated it, confused by it -- spill it below.",
+  "Loved it, hated it, confused by it. Spill it below.",
 ];
 
 /// A visually distinct callout (not just another tile) so feedback gets
@@ -202,114 +252,33 @@ class _FeedbackCallout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final quip = _feedbackQuips[DateTime.now().day % _feedbackQuips.length];
-    return Material(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Text("💬", style: TextStyle(fontSize: 28)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Got thoughts? We're all ears",
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      quip,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSecondaryContainer),
-            ],
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      color: scheme.secondaryContainer,
+      onTap: onTap,
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: scheme.secondary,
+            child: const Icon(Icons.forum_outlined, color: Colors.white),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A rounded, icon-led card used throughout the home screen for status and
-/// quick-action entries -- gives the screen a consistent "modern tile" feel
-/// instead of plain ListTiles.
-class _HomeTile extends StatelessWidget {
-  const _HomeTile({
-    required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    this.trailingLabel,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final String? trailingLabel;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: iconBackground,
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Got thoughts? We're all ears",
+                  style: textTheme.titleMedium?.copyWith(color: scheme.onSecondaryContainer),
                 ),
-              ),
-              if (trailingLabel != null)
-                FilledButton(
-                  onPressed: onTap,
-                  child: Text(trailingLabel!),
-                )
-              else
-                const Icon(Icons.chevron_right),
-            ],
+                Text(quip, style: textTheme.bodySmall?.copyWith(color: scheme.onSecondaryContainer)),
+              ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right, color: scheme.onSecondaryContainer),
+        ],
       ),
     );
   }
