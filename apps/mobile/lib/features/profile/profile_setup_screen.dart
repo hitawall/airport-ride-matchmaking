@@ -5,6 +5,14 @@ import "package:go_router/go_router.dart";
 import "package:image_picker/image_picker.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/ui/app_buttons.dart";
+import "../../core/ui/app_card.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/avatar.dart";
+import "../../core/ui/info_banner.dart";
+import "../../core/ui/state_views.dart";
+import "../../core/ui/tokens.dart";
+import "../../core/ui/tone.dart";
 
 const _genders = {
   "female": "Female",
@@ -12,6 +20,8 @@ const _genders = {
   "other": "Other",
   "prefer_not_to_say": "Prefer not to say",
 };
+
+final _phonePattern = RegExp(r"^\+?\d{8,15}$");
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -29,20 +39,33 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String? _existingPhotoUrl;
   Uint8List? _photoBytes;
   String? _photoFilename;
-  bool _loading = false;
+  bool _saving = false;
   bool _loadingExisting = true;
   // Phone number is already collected (and required) on the signup screen
-  // for brand-new accounts -- no need to ask again here. Existing users
-  // editing their profile via Settings can still see and update it.
+  // for brand-new accounts, so it is only shown here when editing an existing
+  // profile, or when the signup hand-off was lost (e.g. a page reload).
   bool _isNewProfile = true;
+  bool _needsPhone = false;
   String? _error;
+  String? _nameError;
   String? _phoneError;
+
+  bool get _showPhone => !_isNewProfile || _needsPhone;
+  bool get _hasPhoto => _photoBytes != null || _existingPhotoUrl != null;
 
   @override
   void initState() {
     super.initState();
     _phoneController.text = ref.read(pendingSignupPhoneNumberProvider) ?? "";
     _loadExistingProfile();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadExistingProfile() async {
@@ -60,9 +83,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _isNewProfile = false;
       });
     } on ApiException catch (e) {
-      if (e.statusCode != 404) {
-        if (mounted) setState(() => _error = e.message);
-      }
+      if (e.statusCode != 404 && mounted) setState(() => _error = e.message);
       // 404 -- no profile yet, keep the blank defaults (first-time setup).
     } finally {
       if (mounted) setState(() => _loadingExisting = false);
@@ -80,26 +101,25 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   Future<void> _submit() async {
-    if (_nameController.text.trim().isEmpty) {
-      setState(() => _error = "Enter your name");
-      return;
-    }
+    final name = _nameController.text.trim();
     final phoneNumber = _phoneController.text.trim();
-    final phoneValid = RegExp(r"^\+?\d{8,15}$").hasMatch(phoneNumber);
-    if (_isNewProfile) {
-      if (!phoneValid) {
-        setState(() => _error = "Missing phone number -- please sign up again");
-        return;
-      }
-    } else {
-      setState(() => _phoneError = phoneValid ? null : "Enter a valid phone number");
-      if (!phoneValid) return;
-    }
+    final phoneValid = _phonePattern.hasMatch(phoneNumber);
 
     setState(() {
-      _loading = true;
       _error = null;
+      _nameError = name.isEmpty ? "Tell us what to call you" : null;
+      if (!phoneValid) {
+        if (_isNewProfile) _needsPhone = true;
+        _phoneError = _isNewProfile && phoneNumber.isEmpty
+            ? "Add your phone number to continue"
+            : "Enter a valid phone number";
+      } else {
+        _phoneError = null;
+      }
     });
+    if (name.isEmpty || !phoneValid) return;
+
+    setState(() => _saving = true);
     try {
       final api = ref.read(apiClientProvider);
 
@@ -109,7 +129,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
 
       final body = {
-        "displayName": _nameController.text.trim(),
+        "displayName": name,
         "gender": _gender,
         "genderPreference": _genderPreference,
         "profilePhotoUrl": photoUrl,
@@ -128,115 +148,172 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       // Anything other than a clean API error (a network hiccup, a photo
       // upload timing out) -- still surface something rather than silently
       // reverting the button with no explanation.
-      setState(() => _error = "Something went wrong -- please try again.");
+      setState(() => _error = "Something went wrong. Please try again.");
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final title = _isNewProfile ? "Set up your profile" : "Edit profile";
+
     if (_loadingExisting) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return AppPage(title: title, body: const SizedBox(height: 400, child: LoadingView()));
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(_isNewProfile ? "Set up your profile" : "Edit profile")),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
+    final textTheme = Theme.of(context).textTheme;
+
+    return AppPage(
+      title: title,
+      bottomBar: PrimaryButton(
+        label: _isNewProfile ? "Continue" : "Save changes",
+        loading: _saving,
+        onPressed: _submit,
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: AppSpacing.sm),
           Center(
+            child: AppAvatar(
+              bytes: _photoBytes,
+              imageUrl: _existingPhotoUrl,
+              radius: 56,
+              showEditBadge: true,
+              onTap: _pickPhoto,
+            ),
+          ),
+          Center(
+            child: TextButton(
+              onPressed: _pickPhoto,
+              child: Text(_hasPhoto ? "Change photo" : "Add a photo"),
+            ),
+          ),
+          if (!_hasPhoto) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const InfoBanner(
+              tone: AppTone.info,
+              icon: Icons.photo_camera_outlined,
+              title: "A photo is needed to match",
+              message:
+                  "You can skip it for now, but you'll need one before you can search. "
+                  "It helps your match recognise you at pickup.",
+            ),
+          ],
+          const SectionHeader("About you"),
+          AppCard(
             child: Column(
               children: [
-                GestureDetector(
-                  onTap: _pickPhoto,
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundImage: _photoBytes != null
-                        ? MemoryImage(_photoBytes!)
-                        : (_existingPhotoUrl != null ? NetworkImage(_existingPhotoUrl!) : null),
-                    child: _photoBytes == null && _existingPhotoUrl == null
-                        ? const Icon(Icons.add_a_photo)
-                        : null,
+                TextField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  maxLength: 80,
+                  buildCounter: _hideCounter,
+                  onChanged: (_) {
+                    if (_nameError != null) setState(() => _nameError = null);
+                  },
+                  decoration: InputDecoration(
+                    labelText: "Display name",
+                    helperText: "Shown to your match and in chat",
+                    errorText: _nameError,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  "Tap to add a profile photo",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  controller: _bioController,
+                  maxLength: 280,
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: "Bio (optional)",
+                    helperText: "A line or two so your match knows who to look for",
+                    alignLabelWithHint: true,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: "Display name",
-              helperText: "Shown to your match and in chat",
+          const SectionHeader("Matching"),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("I identify as", style: textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final entry in _genders.entries)
+                      ChoiceChip(
+                        label: Text(entry.value),
+                        selected: _gender == entry.key,
+                        onSelected: (_) => setState(() => _gender = entry.key),
+                      ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Divider(),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Same gender matches only", style: textTheme.titleSmall),
+                          Text(
+                            "You'll only see, and be seen by, travelers of your own gender.",
+                            style: textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Switch(
+                      value: _genderPreference == "same_gender_only",
+                      onChanged: (v) => setState(() => _genderPreference = v ? "same_gender_only" : "any"),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _gender,
-            decoration: const InputDecoration(
-              labelText: "Gender",
-              helperText: "Used to apply your matching preference below",
-            ),
-            items: _genders.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                .toList(),
-            onChanged: (v) => setState(() => _gender = v!),
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text("Match with same gender only"),
-            subtitle: const Text("You'll only see, and be seen by, people of your own gender"),
-            value: _genderPreference == "same_gender_only",
-            onChanged: (v) => setState(() => _genderPreference = v ? "same_gender_only" : "any"),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _bioController,
-            maxLength: 280,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: "Bio",
-              helperText: "Optional -- shown on your profile",
-            ),
-          ),
-          if (!_isNewProfile) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: "Phone number",
-                errorText: _phoneError,
-                helperText: "For safety and records only -- never shown to your match",
+          if (_showPhone) ...[
+            const SectionHeader("Contact"),
+            AppCard(
+              child: TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                onChanged: (_) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
+                decoration: InputDecoration(
+                  labelText: "Phone number",
+                  helperText: "For safety and records only. Never shown to your match.",
+                  errorText: _phoneError,
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                ),
               ),
             ),
           ],
           if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: AppSpacing.lg),
+            InfoBanner(tone: AppTone.error, message: _error!),
           ],
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _loading ? null : _submit,
-            child: _loading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(_isNewProfile ? "Continue" : "Save changes"),
-                  ),
-          ),
         ],
       ),
     );
   }
 }
+
+Widget? _hideCounter(
+  BuildContext context, {
+  required int currentLength,
+  required bool isFocused,
+  required int? maxLength,
+}) => null;
