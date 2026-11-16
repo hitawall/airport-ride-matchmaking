@@ -19,7 +19,7 @@ stored in the database: never rename or reuse one.
 ## Add an airport
 
 1. Append an entry to `AIRPORTS` in `apps/api/lib/airports.ts`: IATA `code`
-   (e.g. `DEL`), `name`, `city`, its `terminals`, and a `localities` list (the
+   (e.g. `DEL`), `name`, `city`, the airport's `lat` and `lng` (used for the indicative fare split), its `terminals`, and a `localities` list (the
    destination areas people can pick, each with `lat` and `lng`).
 2. Keep `DEFAULT_AIRPORT_CODE` as `BLR` (the preselected airport) unless you want a different default.
 3. Deploy the API. The app picks it up on next launch; no database change is needed (`airport_code` and `terminal` are plain text columns).

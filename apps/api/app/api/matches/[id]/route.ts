@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getDb, profiles, ratings, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
@@ -27,16 +27,28 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .where(eq(profiles.userId, counterpartId))
     .limit(1);
 
-  const [rideRequest] = await db
-    .select({ airportCode: rideRequests.airportCode, terminal: rideRequests.terminal })
+  // Both trips: the meeting terminal, and each rider's destination area (the
+  // same area name already shown on candidate cards) for the fare split hint.
+  const trips = await db
+    .select({
+      id: rideRequests.id,
+      airportCode: rideRequests.airportCode,
+      terminal: rideRequests.terminal,
+      destinationLocalityLabel: rideRequests.destinationLocalityLabel,
+    })
     .from(rideRequests)
-    .where(eq(rideRequests.id, match.rideRequestAId))
-    .limit(1);
+    .where(inArray(rideRequests.id, [match.rideRequestAId, match.rideRequestBId]));
+  const tripA = trips.find((t) => t.id === match.rideRequestAId);
+  const tripB = trips.find((t) => t.id === match.rideRequestBId);
+  const rideRequest = tripA;
+  const iAmA = match.userAId === userId;
 
   return NextResponse.json({
     ...match,
     airportCode: rideRequest?.airportCode ?? null,
     terminal: rideRequest?.terminal ?? null,
+    myDestinationLocalityLabel: (iAmA ? tripA : tripB)?.destinationLocalityLabel ?? null,
+    counterpartDestinationLocalityLabel: (iAmA ? tripB : tripA)?.destinationLocalityLabel ?? null,
     counterpartDisplayName: counterpart?.displayName ?? null,
     counterpartPhotoUrl: counterpart?.profilePhotoUrl ?? null,
     counterpartAvgRating: stats.ratingCount ? Number(stats.avgRating) : null,
