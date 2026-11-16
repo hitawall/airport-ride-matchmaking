@@ -23,13 +23,13 @@ Vercel > the *API* project > Settings > Environment Variables (Production).
 ## B. Decisions (no accounts needed) - issue #111
 
 - [ ] **B1. Final app name** and a short launcher label (about 12 characters). Draft: "Airport Ride Matchmaking" / "Airport Rides".
-- [ ] **B2. Android package id**: permanent after the first Play upload. Draft: `com.airportridematchmaking.mobile`; ideally the reverse of your domain (see C1).
+- [ ] **B2. Android package id**: permanent after the first Play upload. Decided: `online.airpool.app` (reverse of the chosen domain `airpool.online`). I change it in the build files once you confirm the domain is bought (see C1). Until then the build keeps the old placeholder.
 - [ ] **B3. Icon**: look at the draft (`apps/mobile/assets/icon/store_icon_512.png`) and say keep or change.
   Then I: set name/id, regenerate icons, record in `docs/MOBILE_RELEASE_PLAN.md`. Details: [APP_IDENTITY.md](APP_IDENTITY.md).
 
 ## C. Domain and email - issues #46, #110
 
-- [ ] **C1. Buy the custom domain** (#46), or tell me to skip it and use a Gmail address meanwhile (then email delivery to the public needs a domain anyway, so this is recommended).
+- [ ] **C1. Buy `airpool.online`** (chosen 2026-11-16; #46; confirm it is available at the registrar first, and note `.online` renews at roughly $16-36/yr). Steps: [PILOT_LAUNCH_PLAN.md](PILOT_LAUNCH_PLAN.md) section 1, then tell me it is bought and I connect it to Vercel. (Alternative if you change your mind: tell me to skip it and use a Gmail address meanwhile (then email delivery to the public needs a domain anyway, so this is recommended).
 - [ ] **C2. Resend: verify the domain** (add the DNS records Resend shows). Create a send-only API key.
 - [ ] **C3. Vercel env (API, Production):** `RESEND_API_KEY`, `OTP_FROM_EMAIL` (e.g. `Airport Ride <login@yourdomain.com>`).
 - [ ] **C4. Switch off test mode:** test sign-in with a Gmail and an Outlook address, then **remove `OTP_TEST_MODE`** from Production and redeploy. Do not remove it before email works or nobody can log in. Steps: [PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md).
