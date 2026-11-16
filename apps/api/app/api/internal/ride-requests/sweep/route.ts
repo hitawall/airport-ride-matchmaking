@@ -2,17 +2,19 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError } from "@/lib/api-response";
-import { env } from "@/lib/env";
+import { hasBearer } from "@/lib/moderation/auth";
 
 const EXPIRY_GRACE_HOURS = 4;
 // Generous on purpose -- people are often still coordinating logistics
 // (where to meet, splitting a cab) well after the ride window itself ends.
 const MATCH_EXPIRY_GRACE_HOURS = 24;
 
-/** Vercel Cron hits this on a schedule; protected via CRON_SECRET bearer token. */
-export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${env.cronSecret}`) return jsonError("Unauthorized", 401);
+/**
+ * Vercel Cron calls this on a schedule with an HTTP GET (POST is kept for manual
+ * runs). Protected via the CRON_SECRET bearer token.
+ */
+async function handle(request: Request) {
+  if (!hasBearer(request, process.env.CRON_SECRET)) return jsonError("Unauthorized", 401);
 
   const cutoff = new Date(Date.now() - EXPIRY_GRACE_HOURS * 60 * 60 * 1000);
   const db = getDb();
@@ -58,3 +60,6 @@ export async function POST(request: Request) {
     expiredMatchCount: expiredMatches.rows.length,
   });
 }
+
+export const GET = handle;
+export const POST = handle;
