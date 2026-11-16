@@ -78,6 +78,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
+    // A "matched" trip with no active match behind it (the match expired or
+    // ended) is over: show the plan-a-trip state so the rider is never stuck.
+    if (ride?.status == "matched" && matchId == null && error == null) ride = null;
+
     if (!mounted) return;
     setState(() {
       _displayName = name;
