@@ -15,6 +15,7 @@ import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
 import "../../data/airports.dart";
+import "pass_file.dart";
 
 class CreateRideRequestScreen extends ConsumerStatefulWidget {
   const CreateRideRequestScreen({super.key});
@@ -79,6 +80,22 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   Future<void> _scanBoardingPass() async {
     final result = await context.push<BoardingPassData>("/scan-boarding-pass");
     if (result == null || !mounted) return;
+    await _applyBoardingPass(result);
+  }
+
+  /// Picks a boarding pass file (PDF or image) and fills in the flight from it.
+  Future<void> _uploadBoardingPass() async {
+    final result = await pickBoardingPassFile();
+    if (result.cancelled || !mounted) return;
+    final data = result.data;
+    if (data == null) {
+      showAppSnack(context, result.message ?? "We couldn't read that file.", error: true);
+      return;
+    }
+    await _applyBoardingPass(data);
+  }
+
+  Future<void> _applyBoardingPass(BoardingPassData result) async {
     setState(() {
       _flightController.text = result.carrierFlightNumber;
       _scannedDate = result.flightDate;
@@ -241,13 +258,21 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             textCapitalization: TextCapitalization.characters,
             decoration: InputDecoration(
               labelText: "Flight number (optional)",
-              helperText: "Or scan your boarding pass to fill it in",
+              helperText: "Or scan or upload your boarding pass to fill it in",
               prefixIcon: const Icon(Icons.flight_land_outlined),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.document_scanner_outlined),
                 tooltip: "Scan boarding pass",
                 onPressed: _scanBoardingPass,
               ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _uploadBoardingPass,
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(canReadPassPdf ? "Upload a boarding pass (PDF or photo)" : "Choose a boarding pass photo"),
             ),
           ),
           const _StepLabel(number: 3, text: "Where to?"),
