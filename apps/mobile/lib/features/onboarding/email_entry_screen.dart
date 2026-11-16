@@ -3,6 +3,9 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/auth_controller.dart";
+import "../../core/ui/app_buttons.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/tokens.dart";
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
   const EmailEntryScreen({super.key});
@@ -17,6 +20,13 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   bool _loading = false;
   String? _emailError;
   String? _phoneError;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     final email = _emailController.text.trim();
@@ -54,51 +64,54 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Sign up")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                errorText: _emailError,
-                labelText: "Email address",
-                helperText: "Your verification code is sent here",
-              ),
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return AppPage(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: "Back",
+        onPressed: () => context.go("/"),
+      ),
+      bottomBar: PrimaryButton(label: "Send code", loading: _loading, onPressed: _submit),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+          Text("Let's get you in", style: textTheme.headlineMedium),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            "Sign in or create your account with a one-time code. No passwords.",
+            style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
+            decoration: InputDecoration(
+              errorText: _emailError,
+              labelText: "Email address",
+              helperText: "Your verification code is sent here",
+              prefixIcon: const Icon(Icons.mail_outline),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                errorText: _phoneError,
-                labelText: "Phone number",
-                helperText: "For safety and records only -- never shown to your match",
-              ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            onSubmitted: (_) => _loading ? null : _submit(),
+            decoration: InputDecoration(
+              errorText: _phoneError,
+              labelText: "Phone number",
+              helperText: "For safety and records only. Never shown to your match.",
+              prefixIcon: const Icon(Icons.phone_outlined),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text("Send code"),
-                      ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
