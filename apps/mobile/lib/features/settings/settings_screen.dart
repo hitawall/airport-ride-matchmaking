@@ -90,7 +90,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
-          const _Heading("Rides and safety"),
+          const SectionHeader("Rides and safety"),
           _Group(
             children: [
               _Row(
@@ -101,7 +101,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _Row(icon: Icons.block, title: "Blocked users", onTap: () => _showBlockedUsers(context, api)),
             ],
           ),
-          const _Heading("Help us improve"),
+          const SectionHeader("Help us improve"),
           _Group(
             children: [
               _Row(
@@ -165,20 +165,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _BlockedUsersSheet(api: api),
-    );
-  }
-}
-
-class _Heading extends StatelessWidget {
-  const _Heading(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.sm, left: AppSpacing.xs),
-      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
     );
   }
 }

@@ -50,7 +50,7 @@
     #splash {
       position: fixed; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 18px;
-      background: #FBF3E7; color: #4A2545; z-index: 10;
+      background: #FBF3E7; color: #4A2545; z-index: 10; pointer-events: none;
       font-family: Georgia, "Times New Roman", serif; font-size: 22px;
       transition: opacity .3s ease;
     }
@@ -80,12 +80,15 @@
     <div class="road"></div>
   </div>
   <script>
-    window.addEventListener("flutter-first-frame", function () {
+    function hideSplash() {
       var splash = document.getElementById("splash");
       if (!splash) return;
       splash.style.opacity = "0";
       setTimeout(function () { splash.remove(); }, 350);
-    });
+    }
+    window.addEventListener("flutter-first-frame", hideSplash);
+    // Never let the splash cover the app if the first-frame event is missed.
+    setTimeout(hideSplash, 10000);
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
