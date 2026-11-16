@@ -1,10 +1,10 @@
 {
-    "name": "Airpool: Airport Ride Matchmaking",
+    "name": "Airport Ride Matchmaking",
     "id": "/",
     "scope": "/",
     "lang": "en-IN",
     "categories": ["travel", "navigation"],
-    "short_name": "Airpool",
+    "short_name": "Airport Rides",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#FBF3E7",
