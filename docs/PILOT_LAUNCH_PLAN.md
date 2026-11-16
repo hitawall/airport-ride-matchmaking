@@ -43,7 +43,7 @@ The chosen name `airpool.online` makes the Android package id `online.airpool.ap
 1. **Domain + Vercel custom domain** for the web app and API (issue #46).
 2. **Real email codes** (OWNER_INPUTS section C): Resend domain, then switch off `OTP_TEST_MODE`. Without this nobody outside testing can sign in.
 3. **Legal pages filled in** (OWNER_INPUTS D): operator name, support email, grievance officer, reviewed text.
-4. **Match notification by email.** Today a rider must keep the app open to learn about a match. For a pilot this is the biggest product gap: a rider who closes the tab never finds out. Build "you have a match / new message" emails (Resend) before inviting strangers. I recommend doing this first after the domain.
+4. **In-app alerts for matches and messages** (done; no email, since free email sends are kept for sign-in codes). Riders are alerted by a banner, unread counts and the browser tab title while the app is open. A rider who has closed the tab still will not hear until they return, so tell pilot users to keep the tab open or check back; revisit browser push notifications later if this hurts.
 5. **Phone-friendly web**: install-to-home-screen support and a check of the boarding-pass scanner in mobile Chrome and Safari.
 6. **Monitoring** (OWNER_INPUTS H): uptime monitor, Sentry, PostHog, so the pilot produces data.
 
@@ -55,7 +55,7 @@ terminal, in the same 90-minute window, going the same way. So concentrate:
 - **One airport, two terminals, a few corridors.** Bengaluru only. Push the long, expensive trips first (Whitefield, Marathahalli, Indiranagar, Koramangala, HSR, Electronic City).
 - **Pre-register, then land.** Waitlist with flight date/terminal; invite only when enough people share a day/window. Say "2-3 matches per day" is the goal, not "everyone matches instantly".
 - **Seed with real groups**, not ads: people who fly in often (corporate travellers, student groups returning after holidays, a few friendly companies' travel desks).
-- **Make "no match yet" survivable**: email when someone appears, and honest copy about waiting.
+- **Make "no match yet" survivable**: alert in the app when someone appears, and honest copy about waiting.
 
 **Success criteria (suggested, set your own before launch):**
 
@@ -70,7 +70,7 @@ terminal, in the same 90-minute window, going the same way. So concentrate:
 Decide at week 6: keep going, narrow further, or stop. If match rate stays low
 with healthy sign-ups, the fix is density (fewer windows, more promotion), not features.
 
-**Timeline:** week 0 domain, email, legal, match emails. Week 1 friends and
+**Timeline:** week 0 domain, email, legal, in-app alerts. Week 1 friends and
 family (20-50 people, watch real flights). Weeks 2-4 invite communities (below).
 Weeks 5-6 measure and decide.
 
@@ -138,6 +138,6 @@ daily brief as the next piece of work.
 
 1. Pick and buy the domain, connect it to Vercel (you: buy; me: connect).
 2. Real email, legal values, monitoring (OWNER_INPUTS C, D, H).
-3. Me: match and message emails, web install polish, then agent scaffold.
+3. Me: in-app match and message alerts, web install polish, then agent scaffold.
 4. Invite 20-50 people you know; fix what breaks.
 5. Open to communities in weeks 2-4; weekly metrics review; week-6 decision.

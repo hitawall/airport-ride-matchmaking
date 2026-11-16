@@ -5,6 +5,7 @@ import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/notifications.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/avatar.dart";
@@ -31,6 +32,7 @@ class _MutualMatchScreenState extends ConsumerState<MutualMatchScreen> {
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(notificationsProvider.notifier).markMatchSeen(widget.matchId));
     _load();
   }
 

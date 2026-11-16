@@ -37,14 +37,11 @@ Required checks: test mode off, email configured with a verified sender, strong
 chat and photo storage configured, `CRON_SECRET` set. Recommended: moderation
 email and token ([MODERATION.md](MODERATION.md)), `WEB_APP_ORIGIN`.
 
-## Match and message emails
+## What email is used for
 
-With email configured, people also get a "you have a match" email (both people)
-and a "new message" email (at most one per sender per match per 10 minutes).
-The message text is never included. Links open `WEB_APP_ORIGIN/#/chat/<match id>`,
-so set `WEB_APP_ORIGIN` to the web app's address (the emails still send without
-it, just with no button). Emails go out after the API response, failures are
-logged and never block a match or a message, and the store-review account gets none.
+Email is reserved for sign-in codes and other essential messages (the daily
+moderation digest). Matches and new messages are **not** emailed, because the
+free sending allowance is limited; riders are alerted inside the app instead.
 
 ## Limits worth knowing
 

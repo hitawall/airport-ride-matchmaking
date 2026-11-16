@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { track } from "@/lib/telemetry";
-import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, ne, sql } from "drizzle-orm";
 import { getDb, chatMessages } from "@airport-ride-matchmaking/db";
 import { chatMessageCreateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
 import { getPusher, matchChannelName } from "@/lib/pusher";
-import { notifyNewMessage } from "@/lib/notifications";
-
 // Generous enough for real conversation -- this is about stopping
 // brute-force/scripted abuse, not throttling normal chat.
 const MAX_MESSAGES_PER_MINUTE = 30;
@@ -32,6 +30,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .from(chatMessages)
     .where(whereClause)
     .orderBy(asc(chatMessages.createdAt));
+
+  // Reading the chat marks the other person's messages as read, which is what
+  // clears the unread alert (see /api/notifications/summary).
+  if (messages.some((m) => m.senderId !== userId && !m.readAt)) {
+    await db
+      .update(chatMessages)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(chatMessages.matchId, id),
+          ne(chatMessages.senderId, userId),
+          isNull(chatMessages.readAt),
+        ),
+      );
+  }
 
   return NextResponse.json({ messages });
 }
@@ -79,6 +92,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   await track("message_sent", userId);
-  notifyNewMessage(id, userId, message.id);
   return NextResponse.json(message, { status: 201 });
 }
