@@ -19,12 +19,22 @@ export async function POST(request: Request) {
 
   const db = getDb();
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
+  const [{ count, oldest }] = await db
+    .select({ count: sql<number>`count(*)::int`, oldest: sql<string | null>`min(${otpRequests.createdAt})` })
     .from(otpRequests)
     .where(and(eq(otpRequests.email, email), gte(otpRequests.createdAt, oneHourAgo)));
   if (count >= MAX_SENDS_PER_HOUR) {
-    return jsonError("Too many OTP requests. Try again later.", 429);
+    // Tell them when the oldest request in the window drops out, instead of a
+    // vague "try later".
+    const freeAt = (oldest ? new Date(oldest).getTime() : Date.now()) + 60 * 60 * 1000;
+    const seconds = Math.max(60, Math.ceil((freeAt - Date.now()) / 1000));
+    const minutes = Math.ceil(seconds / 60);
+    const response = jsonError(
+      `You have asked for too many codes. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
+      429,
+    );
+    response.headers.set("Retry-After", String(seconds));
+    return response;
   }
 
   const requestId = randomUUID();
