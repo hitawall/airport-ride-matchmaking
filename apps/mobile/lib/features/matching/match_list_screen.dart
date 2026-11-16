@@ -4,6 +4,7 @@ import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
+import "../../core/notifications.dart";
 import "../../core/ui/app_card.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/avatar.dart";
@@ -14,6 +15,7 @@ import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
 import "../../data/models.dart";
 import "rate_match_dialog.dart";
+import "unmatch_flow.dart";
 
 class MatchListScreen extends ConsumerStatefulWidget {
   const MatchListScreen({super.key});
@@ -174,6 +176,26 @@ class _MatchTile extends ConsumerWidget {
                       ? AppTone.success
                       : (match.status == "expired" ? AppTone.warning : AppTone.neutral),
                 ),
+                if (active) ...[
+                  if ((ref.watch(notificationsProvider).unreadByMatch[match.id] ?? 0) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: StatusPill("${ref.watch(notificationsProvider).unreadByMatch[match.id]} new", tone: AppTone.info),
+                    ),
+                  TextButton(
+                    onPressed: () => unmatchAndFindAnother(
+                      context,
+                      ref,
+                      matchId: match.id,
+                      name: match.counterpartDisplayName,
+                    ),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    child: const Text("Unmatch"),
+                  ),
+                ],
                 if (!active)
                   IconButton(
                     visualDensity: VisualDensity.compact,

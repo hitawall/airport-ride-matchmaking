@@ -85,7 +85,20 @@ export async function POST(request: Request) {
 
   if (existing.status === myProposalStatus) return NextResponse.json(existing);
 
-  if (existing.status === otherProposalStatus) {
+  // A one-sided like that expired because its sender matched someone else counts
+  // again once they are back in the queue (for example after an unmatch).
+  const lapsedLikeFrom =
+    existing.status === "expired" && !(existing.respondedAtA && existing.respondedAtB)
+      ? existing.respondedAtA
+        ? "a"
+        : existing.respondedAtB
+          ? "b"
+          : null
+      : null;
+  const otherLikedMe =
+    existing.status === otherProposalStatus || lapsedLikeFrom === (amIUserA ? "b" : "a");
+
+  if (otherLikedMe) {
     // Mutual! First-mutual-wins: lock this pair in, expire every other pending
     // match for both users, set both ride requests to 'matched'.
     // NOTE: not wrapped in a DB transaction (the neon-http driver doesn't support

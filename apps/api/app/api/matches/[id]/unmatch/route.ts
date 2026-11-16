@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { track } from "@/lib/telemetry";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { getDb, matches, rideRequests } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
@@ -23,19 +23,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .where(eq(matches.id, id))
     .returning();
 
-  // Free up both sides' ride requests -- otherwise they're stuck at
-  // "matched" forever with no mutual match to point to, and the home
-  // screen has no way back into the matching queue.
+  // The person who unmatched goes straight back into the search (their trip
+  // reopens) so they are never left at a dead end, as long as their arrival
+  // window has not passed. The other person's trip is cancelled as before so
+  // they are not matched again without choosing to.
+  const bothIds = [match.rideRequestAId, match.rideRequestBId];
+  const [reopened] = await db
+    .update(rideRequests)
+    .set({ status: "open", updatedAt: new Date() })
+    .where(
+      and(
+        inArray(rideRequests.id, bothIds),
+        eq(rideRequests.userId, userId),
+        eq(rideRequests.status, "matched"),
+        gt(rideRequests.arrivalWindowEnd, new Date()),
+      ),
+    )
+    .returning({ id: rideRequests.id });
   await db
     .update(rideRequests)
     .set({ status: "cancelled", updatedAt: new Date() })
-    .where(
-      and(
-        inArray(rideRequests.id, [match.rideRequestAId, match.rideRequestBId]),
-        eq(rideRequests.status, "matched"),
-      ),
-    );
+    .where(and(inArray(rideRequests.id, bothIds), eq(rideRequests.status, "matched")));
 
   await track("match_unmatched", userId);
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, reopenedRideRequestId: reopened?.id ?? null });
 }
