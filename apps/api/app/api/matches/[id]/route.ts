@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
-import { getDb, ratings } from "@airport-ride-matchmaking/db";
+import { getDb, profiles, ratings } from "@airport-ride-matchmaking/db";
 import { jsonError, requireUserId } from "@/lib/api-response";
 import { getMatchForParticipant } from "@/lib/chat";
 
@@ -21,9 +21,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     })
     .from(ratings)
     .where(eq(ratings.ratedId, counterpartId));
+  const [counterpart] = await db
+    .select({ displayName: profiles.displayName, profilePhotoUrl: profiles.profilePhotoUrl })
+    .from(profiles)
+    .where(eq(profiles.userId, counterpartId))
+    .limit(1);
 
   return NextResponse.json({
     ...match,
+    counterpartDisplayName: counterpart?.displayName ?? null,
+    counterpartPhotoUrl: counterpart?.profilePhotoUrl ?? null,
     counterpartAvgRating: stats.ratingCount ? Number(stats.avgRating) : null,
     counterpartRatingCount: stats.ratingCount,
   });
