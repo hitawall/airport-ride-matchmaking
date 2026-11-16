@@ -49,6 +49,11 @@ export const profiles = pgTable(
       "gender_preference_check",
       sql`${table.genderPreference} IN ('any','same_gender_only')`,
     ),
+    // One mobile number per account (stored normalised, +91XXXXXXXXXX). Older
+    // rows may have none, so only non-empty values are constrained.
+    uniqueIndex("profiles_phone_number_unique_idx")
+      .on(table.phoneNumber)
+      .where(sql`${table.phoneNumber} IS NOT NULL AND ${table.phoneNumber} <> ''`),
   ],
 );
 
