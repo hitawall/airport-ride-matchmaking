@@ -12,6 +12,21 @@ export const env = {
   get otpTestMode() {
     return process.env.OTP_TEST_MODE === "true";
   },
+  /**
+   * Store-review account: a single email that logs in with a fixed code so app
+   * store reviewers (who cannot read email) can get in. Active only when both
+   * REVIEW_ACCOUNT_EMAIL and a REVIEW_ACCOUNT_CODE are set; unset them to
+   * switch it off. The code is exactly 6 digits because that is all the app's
+   * code input and the API accept; 000000 is refused since it is the test-mode
+   * code. Guessing is impractical: 5 attempts per code and 3 codes per hour.
+   */
+  get reviewAccountEmail(): string | undefined {
+    return process.env.REVIEW_ACCOUNT_EMAIL?.trim().toLowerCase() || undefined;
+  },
+  get reviewAccountCode(): string | undefined {
+    const code = process.env.REVIEW_ACCOUNT_CODE?.trim();
+    return code && /^\d{6}$/.test(code) && code !== "000000" ? code : undefined;
+  },
   get resendApiKey() {
     return required("RESEND_API_KEY");
   },

@@ -5,6 +5,7 @@ import { getDb, otpRequests } from "@airport-ride-matchmaking/db";
 import { otpSendSchema } from "@/lib/schemas";
 import { jsonError } from "@/lib/api-response";
 import { getOtpChannel } from "@/lib/otp";
+import { reviewAccountCode } from "@/lib/otp/review-account";
 import { env } from "@/lib/env";
 
 const MAX_SENDS_PER_HOUR = 3;
@@ -27,9 +28,14 @@ export async function POST(request: Request) {
   }
 
   const requestId = randomUUID();
-  const code = env.otpTestMode ? "000000" : String(Math.floor(100000 + Math.random() * 900000));
+  // The store-review account gets its fixed code and no email (reviewers cannot
+  // read the inbox); everyone else gets a random code by email.
+  const reviewCode = env.otpTestMode ? null : reviewAccountCode(email);
+  const code = env.otpTestMode
+    ? "000000"
+    : (reviewCode ?? String(Math.floor(100000 + Math.random() * 900000)));
 
-  if (!env.otpTestMode) {
+  if (!env.otpTestMode && !reviewCode) {
     await getOtpChannel().send(email, code);
   }
 
