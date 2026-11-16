@@ -2,7 +2,7 @@
 
 Status: planned, not started. Implement after the current bug-hunting is done. Last updated 2026-11-16.
 
-Decisions: **Android first, iOS later**; **individual** developer accounts (not a company).
+Decisions: **Android first, iOS later** (deferred by choice; the owner has a Mac); **individual** developer accounts to start, with a possible later switch to a company (see Part 5).
 
 The same Flutter code builds for Android and iOS, so this is mostly packaging, release setup and store compliance, not a rewrite.
 
@@ -62,12 +62,28 @@ Rough timeline (estimate): account setup 1 to 7 days (parallel); code and config
 ## Part 4: iOS later (prerequisites)
 
 - **Apple Developer Program** account (about $99 per year, confirm) and an App Store Connect app record.
-- **No Mac available**: use cloud CI. Codemagic's docs say a personal account gets 500 free macOS minutes per month (about $0.095 per extra minute); GitHub Actions macOS runners cost far more per minute on private repos. Builds must use **Xcode 26 or later with the iOS 26 SDK** (Apple requirement since Apr 28, 2026), so choose a CI image that has it.
-- Signing through an App Store Connect API key (automatic signing in CI).
+- **A Mac is available**, so build locally with Xcode (no cloud CI needed). Builds must use **Xcode 26 or later with the iOS 26 SDK** (Apple requirement since Apr 28, 2026), so check the Mac's macOS version can run it. If the Mac is ever unavailable, cloud CI is the fallback: Codemagic's docs say a personal account gets 500 free macOS minutes per month (about $0.095 per extra minute).
+- Signing: let Xcode manage signing with the Apple Developer account; keep an App Store Connect API key for any future CI upload.
 - `Info.plist`: add `NSCameraUsageDescription` (scanner) and `NSPhotoLibraryUsageDescription`; run the first Mac build to generate the `Podfile`; confirm the iOS deployment target satisfies `mobile_scanner`.
 - App Review: in-app **account deletion** (guideline 5.1.1(v), covered by Part 2.4), **user-generated-content** rules (report and block exist; also publish contact info and be ready to describe moderation), privacy "nutrition labels", a reviewer demo login (same as Part 2.6).
 - **Sign in with Apple** becomes mandatory on iOS if Google sign-in (issue #43) is ever added.
 - Flow: TestFlight internal, then external beta review, then App Review.
+
+## Part 5: switching to a company account (optional, assumes India)
+
+Figures come mostly from consultant blogs and Apple's help pages, not official MCA or Google sources. Re-check before acting.
+
+| Step | Time | Cost |
+|---|---|---|
+| Incorporate a Private Limited (or LLP) via the MCA SPICe+ form | About 5 to 10 working days with clean paperwork | Roughly Rs 7,000 to Rs 25,000 all-in, mostly state stamp duty and digital signatures |
+| Get a **D-U-N-S number** (both stores use it to verify a company) | Apple says up to 5 business days plus about 2 for it to reach Apple; one Indian studio reported weeks of silence, so allow up to a month | Free on the standard route |
+| Developer accounts as an organization | Days after the D-U-N-S number exists | Same fees as individual (about $25 Google, about $99 per year Apple; not verified) |
+
+- Realistic total: **3 to 6 weeks**, can run in parallel with bug-hunting. Add ongoing yearly company filing and accounting costs (no figures found).
+- Apple does not accept sole proprietorships, DBAs or trade names as organizations; it needs a legal entity, a D-U-N-S number, a website, and someone with legal authority to sign.
+- **Not locked in by starting as an individual.** Apple documents converting an individual account to an organization. For Google, sources conflict on converting the account versus creating a new organization account and transferring the app; confirm in Google's docs. The package ID stays the same either way.
+- Trade-offs: an individual account shows your legal name as the seller and (per Google's help page) needs the 12-tester, 14-day closed test. Organization accounts reportedly skip that test (secondary sources only), but the D-U-N-S wait could easily exceed the 14 days saved.
+- Suggested approach: if a company is genuinely planned, start incorporation now in parallel, and begin Play testing as an individual in the meantime.
 
 ## Verification (when implementing)
 
