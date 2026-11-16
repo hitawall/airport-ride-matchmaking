@@ -36,7 +36,7 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Airport Rides">
+  <meta name="apple-mobile-web-app-title" content="Airpool">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -89,6 +89,45 @@
     window.addEventListener("flutter-first-frame", hideSplash);
     // Never let the splash cover the app if the first-frame event is missed.
     setTimeout(hideSplash, 10000);
+  </script>
+  <script>
+    // Install helper for the app. The browser fires `beforeinstallprompt` once and
+    // early (Chrome, Edge, Samsung Internet), so it is captured here, before
+    // Flutter starts. Safari on iPhone and Firefox on Android never fire it;
+    // there the app shows the manual steps instead.
+    (function () {
+      var deferred = null;
+      var ua = navigator.userAgent || "";
+      var standalone =
+        (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+        window.navigator.standalone === true;
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        deferred = e;
+      });
+      window.addEventListener("appinstalled", function () {
+        deferred = null;
+        standalone = true;
+      });
+      window.airpoolInstall = {
+        kind: function () {
+          if (standalone) return "none";
+          if (deferred) return "prompt";
+          var isIos = /iPhone|iPad|iPod/.test(ua) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+          if (isIos) return "ios";
+          if (/Android/.test(ua) && /Firefox/.test(ua)) return "firefox";
+          return "none";
+        },
+        prompt: function () {
+          if (!deferred) return Promise.resolve("unavailable");
+          var e = deferred;
+          deferred = null;
+          e.prompt();
+          return e.userChoice.then(function (c) { return c.outcome; });
+        },
+      };
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
