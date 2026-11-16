@@ -1,8 +1,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter only adds INTERNET to the debug and profile manifests, so a
+         release build would have no network access without this. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Boarding-pass scanner. Optional, so devices without a camera can still
+         install the app and type the flight number instead. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+
+    <!-- allowBackup is off so a restored backup can never carry an
+         undecryptable flutter_secure_storage token onto a new device. -->
     <application
         android:label="mobile"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
