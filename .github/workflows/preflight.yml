@@ -1,0 +1,28 @@
+name: Production preflight
+
+# Manual check that the deployed API is ready for real users (email on, test mode
+# off, reviewer login set, ...). Needs the repository secret PROD_CRON_SECRET.
+# See docs/PRODUCTION_EMAIL_SETUP.md.
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: API base URL
+        default: https://airport-ride-matchmaking-api.vercel.app
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run preflight
+        env:
+          API_URL: ${{ inputs.api_url }}
+          CRON_SECRET: ${{ secrets.PROD_CRON_SECRET }}
+        run: node apps/api/scripts/preflight.mjs
