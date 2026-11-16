@@ -2,6 +2,8 @@
 
 Last updated 2026-11-16.
 
+**Everything left that needs you is in one ordered checklist: [OWNER_INPUTS.md](OWNER_INPUTS.md).**
+
 ## Status
 
 **Done and merged (code ready for Android):**
@@ -16,13 +18,18 @@ Last updated 2026-11-16.
 
 Checked: Flutter 3.50 targets Android API 36 (min 24), which meets Google Play's target-level rule.
 
-**Waiting on you or on a decision (not started on purpose):**
+**Built, waiting only on your values (structure is merged; each issue stays open until you supply them):**
 
-- #108 privacy policy and terms: needs your legal name or entity, a support email and your review of the wording.
-- #110 production email: needs the custom domain (#46), a verified Resend domain and Vercel env changes; do not leave `OTP_TEST_MODE=true` in production.
-- #111 app identity: needs the final display name, package ID and icon decisions.
-- #113 reports review and support contact: needs a support email and a decision on how you want to be notified.
-- Part 1 account tasks (Play Developer account, 12 testers, Android Studio).
+| Issue | What exists | Still needs you |
+|---|---|---|
+| #108 | Public `/privacy` and `/terms` pages with a Draft banner, links on the welcome screen and in Settings, Contact support sheet, `AppConfig` build settings | Operator name, support email, grievance officer, review, then `LEGAL_REVIEWED=true` (OWNER_INPUTS D) |
+| #110 | `/api/health`, launch readiness report, preflight script and workflow, secure OTP generation, clear error when email fails, setup guide (`docs/PRODUCTION_EMAIL_SETUP.md`) | Domain (#46), Resend domain, Vercel env, then remove `OTP_TEST_MODE` (OWNER_INPUTS C) |
+| #111 | Real app name, draft icon (adaptive), splash colour, `docs/APP_IDENTITY.md` | Final name, permanent package id, icon approval, store graphics (OWNER_INPUTS B) |
+| #113 | Daily report digest email, moderator actions, `docs/MODERATION.md`, response target in the terms | `MODERATION_EMAIL`, `MODERATION_TOKEN`, a decision on keeping removal records (OWNER_INPUTS E) |
+| #121 | Optional PostHog events and Sentry errors via the API, app crash reporting and opt-out, `docs/TELEMETRY.md` | Sentry DSN, PostHog key, uptime monitor (OWNER_INPUTS H) |
+| #127 | Daily sweep cron now accepts GET as Vercel sends it | Check the first scheduled run in Vercel |
+
+**Still only yours:** Part 1 account tasks (Play Developer account, 12 testers, Android Studio), the upload keystore, and the Play Console forms (OWNER_INPUTS A, G, J).
 
 **Deferred by choice:** all iOS work (#112).
 
