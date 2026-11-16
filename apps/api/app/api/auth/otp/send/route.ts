@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb, otpRequests } from "@airport-ride-matchmaking/db";
@@ -33,10 +33,17 @@ export async function POST(request: Request) {
   const reviewCode = env.otpTestMode ? null : reviewAccountCode(email);
   const code = env.otpTestMode
     ? "000000"
-    : (reviewCode ?? String(Math.floor(100000 + Math.random() * 900000)));
+    : (reviewCode ?? String(randomInt(100000, 1000000)));
 
   if (!env.otpTestMode && !reviewCode) {
-    await getOtpChannel().send(email, code);
+    try {
+      await getOtpChannel().send(email, code);
+    } catch (error) {
+      // Nothing is stored, so a failed send does not use up one of the
+      // user's hourly attempts. Log the cause (no email address, no code).
+      console.error("otp: email delivery failed", error instanceof Error ? error.message : error);
+      return jsonError("We couldn't send the code right now. Please try again in a minute.", 502);
+    }
   }
 
   const expiresAt = new Date(Date.now() + OTP_TTL_SECONDS * 1000);
