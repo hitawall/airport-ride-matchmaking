@@ -3,13 +3,22 @@ import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "../../core/api_client.dart";
+import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/dialogs.dart";
+import "../../core/ui/formatters.dart";
+import "../../core/ui/state_views.dart";
+import "../../core/ui/tokens.dart";
 import "../../data/models.dart";
 
 const _swipeThreshold = 120.0;
 const _flyDistance = 700.0;
 const _animDuration = Duration(milliseconds: 220);
+
+// Keeps snackbars above the Pass / Like buttons so they never cover them.
+const _snackInset = 132.0;
 
 class MatchReviewScreen extends ConsumerStatefulWidget {
   const MatchReviewScreen({required this.rideRequestId, required this.candidates, super.key});
@@ -64,7 +73,14 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
       _dragOffset = Offset(flyDx, _dragOffset.dy);
     });
     await Future.delayed(_animDuration);
+    final indexBefore = _index;
     await _act(action);
+    if (!mounted) return;
+    if (_index == indexBefore) {
+      // The action failed and this is still the same card: slide it back.
+      setState(() => _dragOffset = Offset.zero);
+      await Future.delayed(_animDuration);
+    }
     if (mounted) {
       setState(() {
         _dragOffset = Offset.zero;
@@ -80,6 +96,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
 
     Map<String, dynamic>? result;
     String? errorMessage;
+    var advance = true;
     try {
       final api = ref.read(apiClientProvider);
       result = await api.post("/api/matches", {
@@ -90,8 +107,12 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
     } on ApiException catch (e) {
       // The candidate may have already been excluded server-side (matched
       // elsewhere, already rejected) -- that's not a failure from the user's
-      // perspective, just advance. Anything else, surface it.
-      errorMessage = e.statusCode == 409 ? null : e.message;
+      // perspective, just advance. Anything else, keep the card so the user
+      // can try again instead of silently losing this person.
+      if (e.statusCode != 409) {
+        errorMessage = e.message;
+        advance = false;
+      }
     }
     if (!mounted) return;
 
@@ -102,18 +123,17 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
 
     setState(() {
       _loading = false;
-      _index++;
+      if (advance) _index++;
     });
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        content: Text(
-          errorMessage ?? (action == "like" ? "Liked -- we'll let you know if it's mutual" : "Passed"),
-        ),
-      ),
+    if (errorMessage != null) {
+      showAppSnack(context, errorMessage, error: true, bottomInset: _snackInset);
+      return;
+    }
+    showAppSnack(
+      context,
+      action == "like" ? "Liked. We'll let you know if it's mutual." : "Passed.",
+      bottomInset: _snackInset,
     );
 
     if (_index >= widget.candidates.length) {
@@ -124,104 +144,317 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
   @override
   Widget build(BuildContext context) {
     if (_index >= widget.candidates.length) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return AppPage(
+        leading: homeLeadingButton(context),
+        title: "Possible matches",
+        body: const SizedBox(height: 360, child: LoadingView()),
+      );
     }
     final candidate = widget.candidates[_index];
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final busy = _loading || _animating;
 
     return Scaffold(
       appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Possible matches")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Expanded(
-              child: AnimatedContainer(
-                duration: _animating ? _animDuration : Duration.zero,
-                curve: Curves.easeOut,
-                transform: Matrix4.rotationZ(_dragOffset.dx / 900)
-                  ..setTranslationRaw(_dragOffset.dx, _dragOffset.dy, 0),
-                transformAlignment: Alignment.center,
-                child: GestureDetector(
-                  onPanUpdate: _onPanUpdate,
-                  onPanEnd: _onPanEnd,
-                  child: Stack(
-                    children: [
-                      Card(
-                        elevation: 4,
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 56,
-                                backgroundImage: candidate.profilePhotoUrl != null
-                                    ? NetworkImage(candidate.profilePhotoUrl!)
-                                    : null,
-                                child: candidate.profilePhotoUrl == null
-                                    ? const Icon(Icons.person, size: 56)
-                                    : null,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                candidate.displayName,
-                                style: Theme.of(context).textTheme.headlineSmall,
-                              ),
-                              const SizedBox(height: 8),
-                              Text("Heading to ${candidate.destinationLocalityLabel}"),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Landing around ${candidate.flightArrivalAt.toLocal()}".split(".").first,
-                              ),
-                            ],
-                          ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: AppSpacing.maxContentWidth),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, 0, AppSpacing.gutter, AppSpacing.lg),
+              child: Column(
+                children: [
+                  Text("${_index + 1} of ${widget.candidates.length}", style: textTheme.labelLarge),
+                  if (_index == 0)
+                    Text(
+                      "Swipe right to like, left to pass",
+                      style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: _animating ? _animDuration : Duration.zero,
+                      curve: Curves.easeOut,
+                      transform: Matrix4.rotationZ(_dragOffset.dx / 900)
+                        ..setTranslationRaw(_dragOffset.dx, _dragOffset.dy, 0),
+                      transformAlignment: Alignment.center,
+                      child: GestureDetector(
+                        onPanUpdate: _onPanUpdate,
+                        onPanEnd: _onPanEnd,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            _CandidateCard(candidate: candidate),
+                            _SwipeStamp(
+                              label: "LIKE",
+                              color: scheme.primary,
+                              opacity: _likeProgress,
+                              alignment: Alignment.topRight,
+                              angle: -0.3,
+                            ),
+                            _SwipeStamp(
+                              label: "PASS",
+                              color: scheme.secondary,
+                              opacity: _passProgress,
+                              alignment: Alignment.topLeft,
+                              angle: 0.3,
+                            ),
+                          ],
                         ),
                       ),
-                      _SwipeStamp(
-                        label: "LIKE",
-                        color: Theme.of(context).colorScheme.primary,
-                        opacity: _likeProgress,
-                        alignment: Alignment.topRight,
-                        angle: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _RoundAction(
+                        label: "Pass",
+                        icon: Icons.close_rounded,
+                        background: AppTheme.surfaceWhite,
+                        foreground: AppTheme.plum,
+                        outlined: true,
+                        scale: 1 + 0.2 * _passProgress,
+                        onPressed: busy ? null : () => _trigger("pass"),
                       ),
-                      _SwipeStamp(
-                        label: "PASS",
-                        color: Theme.of(context).colorScheme.secondary,
-                        opacity: _passProgress,
-                        alignment: Alignment.topLeft,
-                        angle: 0.3,
+                      _RoundAction(
+                        label: "Like",
+                        icon: Icons.favorite_rounded,
+                        background: AppTheme.coral,
+                        foreground: Colors.white,
+                        scale: 1 + 0.2 * _likeProgress,
+                        onPressed: busy ? null : () => _trigger("like"),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CandidateCard extends StatelessWidget {
+  const _CandidateCard({required this.candidate});
+
+  final Candidate candidate;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final hasRating = candidate.ratingCount > 0 && candidate.avgRating != null;
+    final bio = candidate.bio?.trim() ?? "";
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Transform.scale(
-                  scale: 1 + 0.25 * _passProgress,
-                  child: FloatingActionButton(
-                    heroTag: "pass",
-                    onPressed: _loading || _animating ? null : () => _trigger("pass"),
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: const Icon(Icons.close),
-                  ),
-                ),
-                Transform.scale(
-                  scale: 1 + 0.25 * _likeProgress,
-                  child: FloatingActionButton(
-                    heroTag: "like",
-                    onPressed: _loading || _animating ? null : () => _trigger("like"),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: const Icon(Icons.favorite),
+                _Photo(url: candidate.profilePhotoUrl, name: candidate.displayName),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          candidate.displayName,
+                          style: textTheme.headlineSmall?.copyWith(color: Colors.white),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              hasRating ? Icons.star_rounded : Icons.auto_awesome,
+                              size: 16,
+                              color: context.appColors.amber,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              hasRating
+                                  ? "${candidate.avgRating!.toStringAsFixed(1)} (${candidate.ratingCount})"
+                                  : "New traveler",
+                              style: textTheme.bodyMedium?.copyWith(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
+          ),
+          // Sized to its content so the photo gets whatever room is left; the
+          // cap and clip keep very short screens from overflowing.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 210),
+            child: ClipRect(
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _Fact(label: "HEADING TO", value: candidate.destinationLocalityLabel)),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _Fact(
+                            label: "LEAVES THE AIRPORT",
+                            value: formatFriendlyDateTime(candidate.flightArrivalAt),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (candidate.flightNumber != null && candidate.flightNumber!.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _Fact(label: "FLIGHT", value: candidate.flightNumber!),
+                    ],
+                    if (bio.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        bio,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Fact extends StatelessWidget {
+  const _Fact({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: textTheme.labelSmall?.copyWith(color: AppTheme.mutedInk)),
+        Text(value, style: textTheme.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+      ],
+    );
+  }
+}
+
+class _Photo extends StatelessWidget {
+  const _Photo({required this.url, required this.name});
+
+  final String? url;
+  final String name;
+
+  Widget _fallback(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final trimmed = name.trim();
+    return Container(
+      color: scheme.primaryContainer,
+      alignment: Alignment.center,
+      child: Text(
+        trimmed.isEmpty ? "?" : trimmed.characters.first.toUpperCase(),
+        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+          fontSize: 96,
+          color: scheme.onPrimaryContainer,
         ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = url;
+    if (photoUrl == null || photoUrl.isEmpty) return _fallback(context);
+    return Image.network(
+      photoUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stack) => _fallback(context),
+      loadingBuilder: (context, child, progress) => progress == null ? child : _fallback(context),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.scale,
+    required this.onPressed,
+    this.outlined = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final double scale;
+  final bool outlined;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: onPressed == null ? 0.5 : 1,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Transform.scale(
+            scale: scale,
+            child: Material(
+              color: background,
+              elevation: 2,
+              shape: CircleBorder(
+                side: outlined ? const BorderSide(color: AppTheme.line) : BorderSide.none,
+              ),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onPressed,
+                child: SizedBox(width: 64, height: 64, child: Icon(icon, size: 30, color: foreground)),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+        ],
       ),
     );
   }
@@ -245,23 +478,30 @@ class _SwipeStamp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: Align(
-        alignment: alignment,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Opacity(
-            opacity: opacity,
-            child: Transform.rotate(
-              angle: angle,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: color, width: 3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 24, letterSpacing: 1.5),
+      child: IgnorePointer(
+        child: Align(
+          alignment: alignment,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.rotate(
+                angle: angle,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    border: Border.all(color: color, width: 3),
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                 ),
               ),
             ),

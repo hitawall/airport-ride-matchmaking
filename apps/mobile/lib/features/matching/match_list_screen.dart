@@ -1,67 +1,112 @@
 import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
+import "../../core/api_client.dart";
+import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
+import "../../core/ui/app_card.dart";
+import "../../core/ui/app_page.dart";
+import "../../core/ui/avatar.dart";
+import "../../core/ui/formatters.dart";
+import "../../core/ui/state_views.dart";
+import "../../core/ui/status_pill.dart";
+import "../../core/ui/tokens.dart";
+import "../../core/ui/tone.dart";
 import "../../data/models.dart";
 import "rate_match_dialog.dart";
 
-class MatchListScreen extends ConsumerWidget {
+class MatchListScreen extends ConsumerStatefulWidget {
   const MatchListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final api = ref.watch(apiClientProvider);
+  ConsumerState<MatchListScreen> createState() => _MatchListScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Your matches"),
-        actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () => context.push("/settings")),
+class _MatchListScreenState extends ConsumerState<MatchListScreen> {
+  bool _loading = true;
+  String? _error;
+  List<MatchSummary> _matches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await ref.read(apiClientProvider).get("/api/matches/mine") as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _matches = (result["matches"] as List)
+            .map((m) => MatchSummary.fromJson(m as Map<String, dynamic>))
+            .toList();
+        _error = null;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = _matches.where((m) => m.status == "mutual").toList();
+    final past = _matches.where((m) => m.status == "unmatched" || m.status == "expired").toList();
+
+    final Widget body;
+    if (_loading) {
+      body = const SizedBox(height: 360, child: LoadingView());
+    } else if (_error != null && _matches.isEmpty) {
+      body = SizedBox(
+        height: 420,
+        child: ErrorState(
+          message: _error,
+          onRetry: () {
+            setState(() => _loading = true);
+            _load();
+          },
+        ),
+      );
+    } else if (active.isEmpty && past.isEmpty) {
+      body = SizedBox(
+        height: 420,
+        child: EmptyState(
+          icon: Icons.favorite_outline,
+          title: "No matches yet",
+          message: "Find a ride partner and your matches will show up here.",
+          actionLabel: "Find a ride partner",
+          onAction: () => context.go("/create-ride"),
+        ),
+      );
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (active.isNotEmpty) ...[
+            const SectionHeader("Active"),
+            for (final m in active) _MatchTile(match: m, active: true),
+          ],
+          if (past.isNotEmpty) ...[
+            const SectionHeader("Past matches"),
+            for (final m in past) _MatchTile(match: m, active: false),
+          ],
         ],
-      ),
-      body: FutureBuilder(
-        future: api.get("/api/matches/mine"),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final allMatches = ((snapshot.data as Map<String, dynamic>)["matches"] as List)
-              .map((m) => MatchSummary.fromJson(m as Map<String, dynamic>))
-              .toList();
-          final active = allMatches.where((m) => m.status == "mutual").toList();
-          final past = allMatches
-              .where((m) => m.status == "unmatched" || m.status == "expired")
-              .toList();
+      );
+    }
 
-          if (active.isEmpty && past.isEmpty) {
-            return Center(
-              child: TextButton(
-                onPressed: () => context.go("/create-ride"),
-                child: const Text("No matches yet -- create a new ride request"),
-              ),
-            );
-          }
-
-          return ListView(
-            children: [
-              if (active.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                  child: Text("Active", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...active.map((m) => _MatchTile(match: m, active: true)),
-              ],
-              if (past.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                  child: Text("Past matches", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...past.map((m) => _MatchTile(match: m, active: false)),
-              ],
-            ],
-          );
-        },
-      ),
+    return AppPage(
+      title: "Your matches",
+      onRefresh: _load,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: "Settings",
+          onPressed: () => context.push("/settings"),
+        ),
+      ],
+      body: body,
     );
   }
 }
@@ -72,32 +117,75 @@ class _MatchTile extends ConsumerWidget {
   final MatchSummary match;
   final bool active;
 
+  String get _pastLabel => match.status == "unmatched" ? "Unmatched" : "Expired";
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundImage:
-            match.counterpartPhotoUrl != null ? NetworkImage(match.counterpartPhotoUrl!) : null,
-        child: match.counterpartPhotoUrl == null ? const Icon(Icons.person) : null,
-      ),
-      title: Text(match.counterpartDisplayName),
-      subtitle: active
-          ? null
-          : Text(match.status == "unmatched" ? "Unmatched" : "Expired"),
-      trailing: active
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
+    final textTheme = Theme.of(context).textTheme;
+    final hasRating = match.counterpartRatingCount > 0 && match.counterpartAvgRating != null;
+    final updated = match.updatedAt;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        onTap: () => context.push("/chat/${match.id}"),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            AppAvatar(imageUrl: match.counterpartPhotoUrl, name: match.counterpartDisplayName, radius: 26),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(match.counterpartDisplayName, style: textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (hasRating)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star_rounded, size: 16, color: context.appColors.amber),
+                            const SizedBox(width: 2),
+                            Text(
+                              "${match.counterpartAvgRating!.toStringAsFixed(1)} (${match.counterpartRatingCount})",
+                              style: textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      if (!active && updated != null)
+                        Text(formatFriendlyDateTime(updated), style: textTheme.bodySmall),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.star_outline, size: 20),
-                  tooltip: "Rate this match",
-                  onPressed: () => showRateMatchDialog(context, ref.read(apiClientProvider), match.id),
+                StatusPill(
+                  active ? "Active" : _pastLabel,
+                  tone: active
+                      ? AppTone.success
+                      : (match.status == "expired" ? AppTone.warning : AppTone.neutral),
                 ),
-                const Icon(Icons.chat_bubble_outline, size: 18),
+                if (!active)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.star_outline_rounded, size: 22),
+                    tooltip: "Rate this match",
+                    onPressed: () => showRateMatchDialog(context, ref.read(apiClientProvider), match.id),
+                  ),
               ],
             ),
-      onTap: () => context.go("/chat/${match.id}"),
+          ],
+        ),
+      ),
     );
   }
 }

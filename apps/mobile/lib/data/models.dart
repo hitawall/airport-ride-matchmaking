@@ -64,6 +64,10 @@ class Candidate {
     this.profilePhotoUrl,
     required this.flightArrivalAt,
     required this.destinationLocalityLabel,
+    this.flightNumber,
+    this.bio,
+    this.avgRating,
+    this.ratingCount = 0,
   });
 
   final String rideRequestId;
@@ -73,6 +77,10 @@ class Candidate {
   final String? profilePhotoUrl;
   final DateTime flightArrivalAt;
   final String destinationLocalityLabel;
+  final String? flightNumber;
+  final String? bio;
+  final double? avgRating;
+  final int ratingCount;
 
   factory Candidate.fromJson(Map<String, dynamic> json) => Candidate(
     rideRequestId: json["id"] as String,
@@ -82,8 +90,16 @@ class Candidate {
     profilePhotoUrl: json["profile_photo_url"] as String?,
     flightArrivalAt: DateTime.parse(json["flight_arrival_at"] as String),
     destinationLocalityLabel: json["destination_locality_label"] as String,
+    flightNumber: json["flight_number"] as String?,
+    bio: json["bio"] as String?,
+    avgRating: _toDouble(json["avg_rating"]),
+    ratingCount: (_toDouble(json["rating_count"]) ?? 0).toInt(),
   );
 }
+
+/// Numeric columns can arrive as numbers or as strings depending on the
+/// query, so accept both.
+double? _toDouble(Object? value) => value == null ? null : double.tryParse("$value");
 
 class MatchAction {
   MatchAction({required this.id, required this.status});
@@ -100,18 +116,27 @@ class MatchSummary {
     required this.status,
     required this.counterpartDisplayName,
     this.counterpartPhotoUrl,
+    this.counterpartAvgRating,
+    this.counterpartRatingCount = 0,
+    this.updatedAt,
   });
 
   final String id;
   final String status;
   final String counterpartDisplayName;
   final String? counterpartPhotoUrl;
+  final double? counterpartAvgRating;
+  final int counterpartRatingCount;
+  final DateTime? updatedAt;
 
   factory MatchSummary.fromJson(Map<String, dynamic> json) => MatchSummary(
     id: json["id"] as String,
     status: json["status"] as String,
     counterpartDisplayName: json["counterpart_display_name"] as String,
     counterpartPhotoUrl: json["counterpart_photo_url"] as String?,
+    counterpartAvgRating: _toDouble(json["counterpart_avg_rating"]),
+    counterpartRatingCount: (_toDouble(json["counterpart_rating_count"]) ?? 0).toInt(),
+    updatedAt: DateTime.tryParse("${json["updated_at"] ?? ""}"),
   );
 }
 
