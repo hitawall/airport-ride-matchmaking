@@ -15,6 +15,7 @@ import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
+import "../../data/airports.dart";
 import "../../data/models.dart";
 
 const _pollInterval = Duration(seconds: 12);
@@ -222,6 +223,7 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
           if (ride != null) ...[
             BoardingPassCard(
               caption: "YOUR REQUEST",
+              origin: ride.terminal == null ? "Airport" : airportTerminalLabel(ride.airportCode, ride.terminal),
               destination: ride.destinationLocalityLabel,
               timeCaption: "LEAVING THE AIRPORT",
               timeLabel: formatFriendlyDateTime(ride.flightArrivalAt),

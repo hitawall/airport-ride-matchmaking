@@ -10,12 +10,13 @@ export async function GET(request: Request) {
   const db = getDb();
   const result = await db.execute(sql`
     SELECT
-      m.id, m.status, m.user_a_id, m.user_b_id, m.created_at, m.updated_at,
+      m.id, m.status, rra.airport_code, rra.terminal, m.user_a_id, m.user_b_id, m.created_at, m.updated_at,
       CASE WHEN m.user_a_id = ${userId} THEN pb.display_name ELSE pa.display_name END AS counterpart_display_name,
       CASE WHEN m.user_a_id = ${userId} THEN pb.profile_photo_url ELSE pa.profile_photo_url END AS counterpart_photo_url,
       CASE WHEN m.user_a_id = ${userId} THEN rb.avg_rating ELSE ra.avg_rating END AS counterpart_avg_rating,
       CASE WHEN m.user_a_id = ${userId} THEN rb.rating_count ELSE ra.rating_count END AS counterpart_rating_count
     FROM matches m
+    JOIN ride_requests rra ON rra.id = m.ride_request_a_id
     JOIN profiles pa ON pa.user_id = m.user_a_id
     JOIN profiles pb ON pb.user_id = m.user_b_id
     LEFT JOIN (SELECT rated_id, AVG(score)::numeric(3,2) AS avg_rating, COUNT(*)::int AS rating_count FROM ratings GROUP BY rated_id) ra ON ra.rated_id = m.user_a_id

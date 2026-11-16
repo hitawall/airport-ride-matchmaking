@@ -11,6 +11,7 @@ import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
+import "../../data/airports.dart";
 import "../../data/models.dart";
 
 const _swipeThreshold = 120.0;
@@ -330,10 +331,24 @@ class _CandidateCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (candidate.flightNumber != null && candidate.flightNumber!.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      _Fact(label: "FLIGHT", value: candidate.flightNumber!),
-                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _Fact(
+                            label: "MEET AT",
+                            value: airportTerminalLabel(candidate.airportCode, candidate.terminal),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: candidate.flightNumber != null && candidate.flightNumber!.isNotEmpty
+                              ? _Fact(label: "FLIGHT", value: candidate.flightNumber!)
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
                     if (bio.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(

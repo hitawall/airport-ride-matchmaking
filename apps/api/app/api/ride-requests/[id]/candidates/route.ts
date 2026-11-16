@@ -19,13 +19,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     status: string;
     h3_cell_res7: string;
     h3_cell_res8: string;
+    airport_code: string;
+    terminal: string | null;
     flight_arrival_at: string;
     arrival_window_start: string;
     arrival_window_end: string;
     gender: string;
     gender_preference: string;
   }>(sql`
-    SELECT rr.id, rr.user_id, rr.status, rr.h3_cell_res7, rr.h3_cell_res8, rr.flight_arrival_at,
+    SELECT rr.id, rr.user_id, rr.status, rr.h3_cell_res7, rr.h3_cell_res8, rr.airport_code, rr.terminal, rr.flight_arrival_at,
            rr.arrival_window_start, rr.arrival_window_end, p.gender, p.gender_preference
     FROM ride_requests rr
     JOIN profiles p ON p.user_id = rr.user_id
@@ -47,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const candidates = await db.execute(sql`
     SELECT rr.id, rr.user_id, rr.flight_number, rr.flight_arrival_at, rr.destination_locality_label,
-           rr.h3_cell_res7, rr.h3_cell_res8,
+           rr.h3_cell_res7, rr.h3_cell_res8, rr.airport_code, rr.terminal,
            p.display_name, p.gender, p.profile_photo_url, p.bio,
            r.avg_rating, r.rating_count
     FROM ride_requests rr
@@ -58,6 +60,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ) r ON r.rated_id = rr.user_id
     WHERE rr.status = 'open'
       AND rr.user_id != ${mine.user_id}
+      -- Same airport AND same terminal, always. A request without a terminal
+      -- (created before terminals existed) never matches anyone.
+      AND rr.airport_code = ${mine.airport_code}
+      AND rr.terminal IS NOT NULL
+      AND rr.terminal = ${mine.terminal}
       AND rr.h3_cell_res7 = ANY(${neighborCellsLiteral}::text[])
       AND rr.arrival_window_start <= ${mine.arrival_window_end}
       AND rr.arrival_window_end >= ${mine.arrival_window_start}

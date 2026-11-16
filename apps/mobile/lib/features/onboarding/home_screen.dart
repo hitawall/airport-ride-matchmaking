@@ -15,6 +15,7 @@ import "../../core/ui/state_views.dart";
 import "../../core/ui/status_pill.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
+import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../feedback/send_feedback_sheet.dart";
 
@@ -168,6 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isMatched = ride.status == "matched";
     return BoardingPassCard(
       caption: isMatched ? "YOU HAVE A MATCH" : "LOOKING FOR YOUR MATCH",
+      origin: ride.terminal == null ? "Airport" : airportTerminalLabel(ride.airportCode, ride.terminal),
       destination: ride.destinationLocalityLabel,
       timeCaption: "LEAVING THE AIRPORT",
       timeLabel: formatFriendlyDateTime(ride.flightArrivalAt),
