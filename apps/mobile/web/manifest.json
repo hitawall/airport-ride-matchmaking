@@ -1,11 +1,11 @@
 {
-    "name": "mobile",
-    "short_name": "mobile",
+    "name": "Airport Ride Matchmaking",
+    "short_name": "Airport Rides",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FBF3E7",
+    "theme_color": "#E8604B",
+    "description": "Landing at the airport? Find someone heading your way and split the cab.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

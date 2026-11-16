@@ -177,7 +177,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             decoration: const InputDecoration(
               labelText: "Display name",
               helperText: "Shown to your match and in chat",
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -186,7 +185,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             decoration: const InputDecoration(
               labelText: "Gender",
               helperText: "Used to apply your matching preference below",
-              border: OutlineInputBorder(),
             ),
             items: _genders.entries
                 .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
@@ -209,7 +207,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             decoration: const InputDecoration(
               labelText: "Bio",
               helperText: "Optional -- shown on your profile",
-              border: OutlineInputBorder(),
             ),
           ),
           if (!_isNewProfile) ...[
@@ -221,7 +218,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 labelText: "Phone number",
                 errorText: _phoneError,
                 helperText: "For safety and records only -- never shown to your match",
-                border: const OutlineInputBorder(),
               ),
             ),
           ],

@@ -267,7 +267,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       controller: _inputController,
                       decoration: const InputDecoration(
                         hintText: "Message",
-                        border: OutlineInputBorder(),
                       ),
                       onSubmitted: (_) => _send(),
                     ),

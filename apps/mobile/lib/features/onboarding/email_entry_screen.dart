@@ -65,7 +65,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                border: const OutlineInputBorder(),
                 errorText: _emailError,
                 labelText: "Email address",
                 helperText: "Your verification code is sent here",
@@ -76,7 +75,6 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                border: const OutlineInputBorder(),
                 errorText: _phoneError,
                 labelText: "Phone number",
                 helperText: "For safety and records only -- never shown to your match",

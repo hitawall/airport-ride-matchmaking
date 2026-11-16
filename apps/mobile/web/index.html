@@ -18,7 +18,8 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Landing at the airport? Find someone heading your way and split the cab.">
+  <meta name="theme-color" content="#FBF3E7">
 
   <!--
     Uncomment the tag below to lay the app out underneath the parts of the
@@ -34,15 +35,33 @@
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="mobile">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Airport Rides">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>mobile</title>
+  <title>Airport Ride Matchmaking</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #FBF3E7; }
+    #splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+      background: #FBF3E7; color: #4A2545; z-index: 10;
+      font-family: Georgia, "Times New Roman", serif; font-size: 22px;
+      transition: opacity .3s ease;
+    }
+    #splash .road {
+      width: 120px; height: 4px; border-radius: 2px;
+      background: repeating-linear-gradient(90deg, #E8604B 0 14px, transparent 14px 24px);
+      background-size: 48px 4px; animation: drive 0.9s linear infinite;
+    }
+    @keyframes drive { to { background-position: -48px 0; } }
+    @media (prefers-reduced-motion: reduce) { #splash .road { animation: none; } }
+  </style>
 
   <!-- Required by pusher_channels_flutter's web implementation -->
   <script charset="utf-8" src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
@@ -56,6 +75,18 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <div id="splash" aria-hidden="true">
+    <div>Airport Ride Matchmaking</div>
+    <div class="road"></div>
+  </div>
+  <script>
+    window.addEventListener("flutter-first-frame", function () {
+      var splash = document.getElementById("splash");
+      if (!splash) return;
+      splash.style.opacity = "0";
+      setTimeout(function () { splash.remove(); }, 350);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
