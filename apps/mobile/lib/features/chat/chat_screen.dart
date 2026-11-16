@@ -18,6 +18,7 @@ import "../../core/ui/tone.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../matching/rate_match_dialog.dart";
+import "../matching/unmatch_flow.dart";
 
 const _reportReasons = {
   "harassment": "Harassment",
@@ -61,6 +62,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   bool get _isActive => _matchStatus == null || _matchStatus == "mutual";
   String get _displayName => _counterpartName ?? "Your match";
+
+  /// True once the other person has sent at least one message.
+  bool get _counterpartHasReplied {
+    final me = ref.read(authControllerProvider).userId;
+    return _messages.any((m) => m.senderId != me);
+  }
 
   @override
   void initState() {
@@ -121,21 +128,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _unmatch() async {
-    final confirmed = await confirmAction(
-      context,
-      title: "Unmatch $_displayName?",
-      message: "You'll both lose access to this chat going forward. This can't be undone.",
-      confirmLabel: "Unmatch",
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-
-    try {
-      await ref.read(apiClientProvider).post("/api/matches/${widget.matchId}/unmatch");
-      if (mounted) setState(() => _matchStatus = "unmatched");
-    } on ApiException catch (e) {
-      if (mounted) showAppSnack(context, e.message, error: true);
-    }
+    final done = await unmatchAndFindAnother(context, ref, matchId: widget.matchId, name: _displayName);
+    if (done && mounted) setState(() => _matchStatus = "unmatched");
   }
 
   Future<void> _rate() => showRateMatchDialog(
@@ -204,19 +198,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (mounted) showAppSnack(context, "$_displayName is blocked.");
     } on ApiException catch (e) {
       if (mounted) showAppSnack(context, e.message, error: true);
-    }
-  }
-
-  Future<void> _onMenuAction(String action) {
-    switch (action) {
-      case "unmatch":
-        return _unmatch();
-      case "rate":
-        return _rate();
-      case "report":
-        return _report();
-      default:
-        return _block();
     }
   }
 
@@ -303,17 +284,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: _onMenuAction,
-            itemBuilder: (context) => [
-              if (_isActive) const PopupMenuItem(value: "unmatch", child: Text("Unmatch")),
-              if (!_isActive && !_hasRated) const PopupMenuItem(value: "rate", child: Text("Rate your match")),
-              const PopupMenuItem(value: "report", child: Text("Report")),
-              const PopupMenuItem(value: "block", child: Text("Block")),
-            ],
-          ),
-        ],
       ),
       body: SafeArea(
         child: Center(
@@ -343,6 +313,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       tone: AppTone.neutral,
                       icon: Icons.history,
                       message: "This match has ended. You can still read your messages, but can't send new ones.",
+                    ),
+                  ),
+                _SafetyActions(
+                  canUnmatch: _isActive,
+                  onUnmatch: _unmatch,
+                  onReport: _report,
+                  onBlock: _block,
+                ),
+                if (_isActive && !_loadingMessages && !_counterpartHasReplied)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, 0),
+                    child: InfoBanner(
+                      tone: AppTone.info,
+                      icon: Icons.hourglass_empty,
+                      title: "No reply yet?",
+                      message:
+                          "If $_displayName has gone quiet, you can unmatch and we will put you straight back in the search for someone else.",
+                      action: TextButton(onPressed: _unmatch, child: const Text("Unmatch")),
                     ),
                   ),
                 Expanded(child: _buildMessages(context)),
@@ -426,6 +414,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Always-visible exits: one tap (then a confirmation) for anything safety related.
+class _SafetyActions extends StatelessWidget {
+  const _SafetyActions({
+    required this.canUnmatch,
+    required this.onUnmatch,
+    required this.onReport,
+    required this.onBlock,
+  });
+
+  final bool canUnmatch;
+  final VoidCallback onUnmatch;
+  final VoidCallback onReport;
+  final VoidCallback onBlock;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = Theme.of(context).colorScheme.error;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        children: [
+          if (canUnmatch)
+            TextButton.icon(
+              onPressed: onUnmatch,
+              icon: const Icon(Icons.heart_broken_outlined, size: 18),
+              label: const Text("Unmatch"),
+              style: TextButton.styleFrom(foregroundColor: error, visualDensity: VisualDensity.compact),
+            ),
+          TextButton.icon(
+            onPressed: onReport,
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: const Text("Report"),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+          ),
+          TextButton.icon(
+            onPressed: onBlock,
+            icon: const Icon(Icons.block, size: 18),
+            label: const Text("Block"),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -73,6 +73,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         WHERE (b.blocker_id = ${mine.user_id} AND b.blocked_id = rr.user_id)
            OR (b.blocker_id = rr.user_id AND b.blocked_id = ${mine.user_id})
       )
+      -- Someone I unmatched (or who unmatched me) is never offered again, on any trip.
+      AND NOT EXISTS (
+        SELECT 1 FROM matches um
+        WHERE um.status = 'unmatched'
+          AND ((um.user_a_id = ${mine.user_id} AND um.user_b_id = rr.user_id)
+            OR (um.user_b_id = ${mine.user_id} AND um.user_a_id = rr.user_id))
+      )
       AND (${mine.gender_preference} != 'same_gender_only' OR p.gender = ${mine.gender})
       AND (p.gender_preference != 'same_gender_only' OR p.gender = ${mine.gender})
       AND NOT EXISTS (
@@ -82,8 +89,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             OR (m.ride_request_a_id = rr.id AND m.ride_request_b_id = ${mine.id})
           )
           AND (
-            -- Either side already passed: this pair is permanently done.
-            m.status = 'rejected'
+            -- Either side already passed or unmatched: this pair is permanently done.
+            m.status IN ('rejected', 'unmatched')
             -- I'm the one who already proposed (liked) this exact candidate --
             -- whoever proposes first always ends up as ride_request_a_id, so
             -- this is true only when *I* made the first move, not when they
