@@ -107,7 +107,7 @@ LegalDocument buildTerms() {
         "You keep ownership of what you post. You allow us to store and show it to the people you are matched with, as needed to run the service.",
       ]),
       LegalSection("Reports, blocks and removal", [
-        "You can report or block anyone from a chat. We review reports and may remove content or suspend or delete accounts that break these rules, with or without notice where safety is at risk.",
+        "You can report or block anyone from a chat. We review every report, aiming to do so within 48 hours, and may remove content or suspend or delete accounts that break these rules, with or without notice where safety is at risk.",
         "To report a concern, use the report option in a chat or contact $contact.",
       ]),
       const LegalSection("The service", [
