@@ -8,7 +8,6 @@ import "../../core/home_leading_button.dart";
 import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/boarding_pass_card.dart";
-import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/horizon_scene.dart";
 import "../../core/ui/info_banner.dart";
@@ -17,6 +16,7 @@ import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
+import "cancel_search.dart";
 
 const _pollInterval = Duration(seconds: 12);
 const _quipInterval = Duration(seconds: 6);
@@ -122,28 +122,13 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
   }
 
   Future<void> _cancel() async {
-    final confirmed = await confirmAction(
-      context,
-      title: "Cancel this request?",
-      message:
-          "You'll stop showing up in other travelers' candidate lists and will need to "
-          "create a new request to search again.",
-      confirmLabel: "Cancel request",
-      cancelLabel: "Keep searching",
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-
     setState(() => _cancelling = true);
-    try {
-      final api = ref.read(apiClientProvider);
-      await api.patch("/api/ride-requests/${widget.rideRequestId}", {"status": "cancelled"});
-      if (mounted) context.go("/home");
-    } on ApiException catch (e) {
-      if (mounted) {
-        setState(() => _cancelling = false);
-        showAppSnack(context, e.message, error: true);
-      }
+    final cancelled = await confirmAndCancelSearch(context, ref, widget.rideRequestId);
+    if (!mounted) return;
+    if (cancelled) {
+      context.go("/home");
+    } else {
+      setState(() => _cancelling = false);
     }
   }
 
@@ -185,7 +170,7 @@ class _AwaitingMatchScreenState extends ConsumerState<AwaitingMatchScreen> {
     return AppPage(
       leading: homeLeadingButton(context),
       title: "Finding your ride buddy",
-      bottomBar: SecondaryButton(label: "Cancel this request", loading: _cancelling, onPressed: _cancel),
+      bottomBar: SecondaryButton(label: "Stop searching", loading: _cancelling, onPressed: _cancel),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

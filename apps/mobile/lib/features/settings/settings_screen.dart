@@ -99,11 +99,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SectionHeader("Rides and safety"),
           _Group(
             children: [
-              _Row(
-                icon: Icons.cancel_outlined,
-                title: "Cancel active ride request",
-                onTap: () => _cancelActiveRideRequest(context, api),
-              ),
               _Row(icon: Icons.block, title: "Blocked users", onTap: () => _showBlockedUsers(context, api)),
             ],
           ),
@@ -185,47 +180,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     await ref.read(authControllerProvider.notifier).logout();
     if (mounted) context.go("/");
-  }
-
-  Future<void> _cancelActiveRideRequest(BuildContext context, ApiClient api) async {
-    Map<String, dynamic>? mine;
-    try {
-      mine = await api.get("/api/ride-requests/mine") as Map<String, dynamic>;
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        showAppSnack(
-          context,
-          e.statusCode == 404 ? "You don't have a ride request." : e.message,
-          error: e.statusCode != 404,
-        );
-      }
-      return;
-    }
-
-    if (mine["status"] != "open") {
-      if (context.mounted) showAppSnack(context, "You don't have an active ride request to cancel.");
-      return;
-    }
-
-    if (!context.mounted) return;
-    final confirmed = await confirmAction(
-      context,
-      title: "Cancel this request?",
-      message:
-          "You'll stop showing up in other travelers' candidate lists and will need to "
-          "create a new request to search again.",
-      confirmLabel: "Cancel request",
-      cancelLabel: "Keep searching",
-      destructive: true,
-    );
-    if (!confirmed) return;
-
-    try {
-      await api.patch("/api/ride-requests/${mine["id"]}", {"status": "cancelled"});
-      if (context.mounted) showAppSnack(context, "Ride request cancelled.");
-    } on ApiException catch (e) {
-      if (context.mounted) showAppSnack(context, e.message, error: true);
-    }
   }
 
   void _showBlockedUsers(BuildContext context, ApiClient api) {

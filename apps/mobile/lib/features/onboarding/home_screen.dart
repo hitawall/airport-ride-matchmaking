@@ -9,6 +9,7 @@ import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_card.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/boarding_pass_card.dart";
+import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/horizon_scene.dart";
 import "../../core/ui/info_banner.dart";
@@ -20,6 +21,7 @@ import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../feedback/send_feedback_sheet.dart";
 import "../install/install.dart";
+import "../ride_request/cancel_search.dart";
 
 /// The landing screen after login. Shows a greeting and the user's current
 /// trip. A missing profile is the one case that still auto-redirects
@@ -94,6 +96,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  Future<void> _stopSearching() async {
+    final id = _ride?.id;
+    if (id == null) return;
+    final cancelled = await confirmAndCancelSearch(context, ref, id);
+    if (cancelled && mounted) {
+      showAppSnack(context, "Search stopped.");
+      _load();
+    }
+  }
+
   /// Pushed screens (settings, matches) can change the trip, e.g. cancelling
   /// a request, so reload when the user comes back.
   Future<void> _openAndRefresh(String location) async {
@@ -144,6 +156,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: AppSpacing.lg),
                 ],
                 _buildTripCard(context, alerts),
+                if (_ride?.status == "open")
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _stopSearching,
+                      icon: const Icon(Icons.close, size: 18),
+                      label: const Text("Stop searching"),
+                    ),
+                  ),
                 // Right under the trip card, where the eye lands, not pinned out of sight at the bottom.
                 if (!_hasActiveTrip) ...[
                   const SizedBox(height: AppSpacing.lg),
