@@ -10,6 +10,7 @@ import "../../core/ui/app_page.dart";
 import "../../core/ui/avatar.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/state_views.dart";
+import "../notifications/notifications_screen.dart";
 import "../../core/ui/status_pill.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
@@ -102,6 +103,7 @@ class _MatchListScreenState extends ConsumerState<MatchListScreen> {
       title: "Your matches",
       onRefresh: _load,
       actions: [
+        const NotificationBell(),
         IconButton(
           icon: const Icon(Icons.settings_outlined),
           tooltip: "Settings",
