@@ -190,7 +190,22 @@ await scenario("Unmatch tells the other person and never re-queues them", async 
   check("the chat reports that it ended", (await call("GET", `/matches/${match.id}/messages`, b.token)).matchStatus === "unmatched");
   const resumed = await call("POST", "/ride-requests/resume", b.token);
   check("they can choose to search again", resumed.status === "open" && resumed.id === rb.id);
-  check("the same two people are not paired again", !(await candidates(b, rb)).includes(a.userId));
+  check("an unmatched pair can appear to each other again", (await candidates(b, rb)).includes(a.userId) && (await candidates(a, ra)).includes(b.userId));
+  const again = await like(b, rb, ra);
+  check("liking an unmatched person restarts the match", again.status === "proposed_by_a" && again.userAId === b.userId);
+  const rematch = await like(a, ra, rb);
+  check("and they can match again", rematch.status === "mutual");
+});
+
+await scenario("Passing on someone hides them", async () => {
+  const a = await rider("Asha");
+  const c = await rider("Passed on");
+  const ra = await trip(a);
+  const rc = await trip(c);
+  check("they show up first", (await candidates(a, ra)).includes(c.userId));
+  await call("POST", "/matches", a.token, { rideRequestId: ra.id, candidateRideRequestId: rc.id, action: "pass" });
+  check("after a pass they are hidden", !(await candidates(a, ra)).includes(c.userId));
+  check("and cannot be liked later", (await raw("POST", "/matches", a.token, { rideRequestId: ra.id, candidateRideRequestId: rc.id, action: "like" })).status === 409);
 });
 
 await scenario("Blocking someone you are matched with ends the match", async () => {

@@ -82,14 +82,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             OR (m.ride_request_a_id = rr.id AND m.ride_request_b_id = ${mine.id})
           )
           AND (
-            -- Either side already passed or unmatched: this pair is permanently done.
-            m.status IN ('rejected', 'unmatched')
+            -- Someone passed on this pair: it stays hidden. An unmatched pair is
+            -- NOT hidden: they may meet again (only a block is permanent).
+            m.status = 'rejected'
             -- I'm the one who already proposed (liked) this exact candidate --
             -- whoever proposes first always ends up as ride_request_a_id, so
             -- this is true only when *I* made the first move, not when they
             -- liked me and I haven't responded yet (that case should still
             -- show up so I can respond and get an instant mutual match).
-            OR m.ride_request_a_id = ${mine.id}
+            OR (m.status <> 'unmatched' AND m.ride_request_a_id = ${mine.id})
           )
       )
     ORDER BY
