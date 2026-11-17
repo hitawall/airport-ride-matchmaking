@@ -14,6 +14,7 @@ import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
+import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
 import "pass_file.dart";
 
@@ -39,6 +40,8 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   String? _error;
   String? _destinationError;
   String? _timeError;
+  int? _trolleyBags;
+  String? _bagsError;
   bool _missingPhoto = false;
 
   @override
@@ -119,9 +122,10 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
       _missingPhoto = false;
       _terminalError = _terminal == null ? "Choose the terminal you arrive at" : null;
       _destinationError = _destination == null ? "Choose your destination from the list" : null;
+      _bagsError = _trolleyBags == null ? "Tell us how many trolley bags you have (0 is fine)" : null;
       _timeError = _arrivalAt == null ? "Choose when you plan to leave the airport" : null;
     });
-    if (_terminal == null || _destination == null || _arrivalAt == null) return;
+    if (_terminal == null || _destination == null || _arrivalAt == null || _trolleyBags == null) return;
 
     setState(() => _loading = true);
     try {
@@ -136,6 +140,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
         "destinationLat": _destination!.lat,
         "destinationLng": _destination!.lng,
         "destinationLocalityLabel": _destination!.label,
+        "trolleyBags": _trolleyBags,
       });
       if (!mounted) return;
       context.go("/awaiting-match/${result["id"]}");
@@ -341,7 +346,37 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
               ),
             ),
           ),
-          const _StepLabel(number: 4, text: "When do you leave the airport?"),
+          const _StepLabel(number: 4, text: "How much luggage do you have?"),
+          Text(
+            "Trolley bags (the wheeled ones). Your match sees this before they decide.",
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (var n = 0; n <= maxTrolleyBags; n++)
+                ChoiceChip(
+                  label: Text("$n"),
+                  tooltip: trolleyBagsLabel(n),
+                  selected: _trolleyBags == n,
+                  onSelected: (_) => setState(() {
+                    _trolleyBags = n;
+                    _bagsError = null;
+                  }),
+                ),
+            ],
+          ),
+          if (_bagsError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text(
+                _bagsError!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          const _StepLabel(number: 5, text: "When do you leave the airport?"),
           TextField(
             controller: _timeController,
             readOnly: true,

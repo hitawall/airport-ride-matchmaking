@@ -71,6 +71,13 @@
       "when": 1794854787986,
       "tag": "0009_wide_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794907589736,
+      "tag": "0010_trolley_bags",
+      "breakpoints": true
     }
   ]
 }

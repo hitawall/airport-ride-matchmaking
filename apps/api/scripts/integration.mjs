@@ -86,6 +86,7 @@ const trip = (u, { terminal = "T1", hours = 36, area = ["Indiranagar", 12.9719, 
     destinationLat: area[1],
     destinationLng: area[2],
     destinationLocalityLabel: area[0],
+    trolleyBags: 1,
   });
 const candidates = async (u, ride) =>
   (await call("GET", `/ride-requests/${ride.id}/candidates`, u.token)).candidates.map((c) => c.user_id);
@@ -127,8 +128,9 @@ await scenario("Ride requests and candidates", async () => {
   const blocked = await rider("Blocked");
   const female = await rider("Wants women only", { gender: "female", genderPreference: "same_gender_only" });
 
-  check("a terminal is required", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x" })).status === 400);
-  check("a terminal the airport lacks is refused", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", terminal: "T9", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x" })).status === 400);
+  check("a terminal is required", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x", trolleyBags: 1 })).status === 400);
+  check("a terminal the airport lacks is refused", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", terminal: "T9", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x", trolleyBags: 1 })).status === 400);
+  check("the number of trolley bags is required", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", terminal: "T1", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x" })).status === 400);
 
   const ra = await trip(a);
   await trip(same, { hours: 36.5 });
@@ -145,6 +147,8 @@ await scenario("Ride requests and candidates", async () => {
   check("blocked people are never candidates", !ids.includes(blocked.userId));
   check("same-gender-only riders are not shown to people of another gender", !ids.includes(female.userId));
   check("you are never your own candidate", !ids.includes(a.userId));
+  const asSeen = (await call("GET", `/ride-requests/${ra.id}/candidates`, a.token)).candidates.find((c) => c.user_id === same.userId);
+  check("a candidate shows how many trolley bags they bring", asSeen?.trolley_bags === 1, JSON.stringify(asSeen?.trolley_bags));
 });
 
 await scenario("Like, mutual match, chat and unread alerts", async () => {

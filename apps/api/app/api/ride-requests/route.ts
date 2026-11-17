@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       destinationLat: data.destinationLat,
       destinationLng: data.destinationLng,
       destinationLocalityLabel: data.destinationLocalityLabel,
+      trolleyBags: data.trolleyBags,
       h3CellRes7,
       h3CellRes8,
     })

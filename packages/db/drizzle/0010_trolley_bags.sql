@@ -1,0 +1,1 @@
+ALTER TABLE "ride_requests" ADD COLUMN "trolley_bags" integer;
