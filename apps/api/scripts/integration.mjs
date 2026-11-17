@@ -108,6 +108,12 @@ async function scenario(title, fn) {
   }
 }
 
+await scenario("Google sign-in", async () => {
+  check("a request without a token is refused", (await raw("POST", "/auth/google", null, {})).status === 400);
+  const fake = await raw("POST", "/auth/google", null, { accessToken: "not-a-real-google-token" });
+  check("a made-up token never signs anyone in", [401, 502, 503].includes(fake.status), `got ${fake.status}`);
+});
+
 await scenario("Profiles", async () => {
   const a = await rider("Asha");
   const other = await rider("Ravi");

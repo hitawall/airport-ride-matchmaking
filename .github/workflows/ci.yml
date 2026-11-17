@@ -96,6 +96,7 @@ jobs:
           LEGAL_JURISDICTION: ${{ vars.LEGAL_JURISDICTION }}
           WEB_APP_URL: ${{ vars.WEB_APP_URL }}
           LEGAL_REVIEWED: ${{ vars.LEGAL_REVIEWED }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
         run: bash ../../.github/scripts/app-defines.sh
       - run: flutter build appbundle --release --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://api.airpool.online --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
       - name: Bundle must not be debug-signed
@@ -152,6 +153,7 @@ jobs:
           LEGAL_JURISDICTION: ${{ vars.LEGAL_JURISDICTION }}
           WEB_APP_URL: ${{ vars.WEB_APP_URL }}
           LEGAL_REVIEWED: ${{ vars.LEGAL_REVIEWED }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
         run: bash ../../.github/scripts/app-defines.sh
       - run: flutter build web --dart-define-from-file=app-defines.json --dart-define=API_BASE_URL=https://api.airpool.online --dart-define=PUSHER_KEY=b7a8d59d5416afc1e718 --dart-define=PUSHER_CLUSTER=ap2
       - run: npx vercel deploy build/web --prod --yes --token=${{ secrets.VERCEL_TOKEN }}

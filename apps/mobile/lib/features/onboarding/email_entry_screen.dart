@@ -8,6 +8,7 @@ import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/phone_field.dart";
 import "../../core/ui/tokens.dart";
+import "google_sign_in.dart";
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
   const EmailEntryScreen({super.key});
@@ -21,6 +22,8 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
   final _phoneController = TextEditingController();
   PhoneCountry _country = defaultPhoneCountry;
   bool _loading = false;
+  bool _googleLoading = false;
+  String? _googleError;
   String? _emailError;
   String? _phoneError;
 
@@ -60,6 +63,32 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
       setState(() => _emailError = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Signs in with Google's popup. The person skips the email and phone fields;
+  /// new people are asked for their phone number on the next screen.
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      _googleLoading = true;
+      _googleError = null;
+    });
+    try {
+      final google = await ref.read(googleTokenRequesterProvider)();
+      if (google.cancelled || !mounted) return;
+      final token = google.accessToken;
+      if (token == null) {
+        setState(() => _googleError = google.error ?? "Google sign-in didn't finish. Please try again.");
+        return;
+      }
+      final result = await ref.read(apiClientProvider).post("/api/auth/google", {"accessToken": token});
+      await ref.read(authControllerProvider.notifier).login(result["token"] as String, result["userId"] as String);
+      if (!mounted) return;
+      context.go(result["isNewUser"] == true ? "/profile-setup" : "/home");
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _googleError = e.message);
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
     }
   }
 
@@ -111,6 +140,31 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
             errorText: _phoneError,
             helperText: "For safety and records only. Never shown to your match.",
           ),
+          if (ref.watch(googleSignInEnabledProvider)) ...[
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text("or", style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SecondaryButton(
+              label: "Continue with Google",
+              icon: Icons.account_circle_outlined,
+              loading: _googleLoading,
+              onPressed: _continueWithGoogle,
+            ),
+            if (_googleError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(_googleError!, style: textTheme.bodySmall?.copyWith(color: scheme.error)),
+              ),
+          ],
         ],
       ),
     );

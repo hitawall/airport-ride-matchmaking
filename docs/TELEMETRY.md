@@ -20,7 +20,7 @@ calls, so keys stay on the server and the web build has no tracking cookies.
 
 ## Events (all server-side except `app_opened`)
 
-`account_created`, `otp_verified`, `ride_request_created`, `match_like`,
+`account_created`, `otp_verified`, `google_sign_in`, `ride_request_created`, `match_like`,
 `match_pass`, `mutual_match_created`, `match_unmatched`, `message_sent`,
 `rating_given` (score), `report_filed` (reason), `block_created`,
 `feedback_submitted`, `account_deleted`, `app_opened` (platform, app version).

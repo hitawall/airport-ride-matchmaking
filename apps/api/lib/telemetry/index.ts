@@ -15,6 +15,7 @@ import { createHmac } from "node:crypto";
 export type TelemetryEvent =
   | "account_created"
   | "otp_verified"
+  | "google_sign_in"
   | "ride_request_created"
   | "match_like"
   | "match_pass"
