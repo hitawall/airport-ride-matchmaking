@@ -98,6 +98,9 @@ export const rideRequests = pgTable(
     h3CellRes7: text("h3_cell_res7").notNull(),
     h3CellRes8: text("h3_cell_res8").notNull(),
     destinationLocalityLabel: text("destination_locality_label").notNull(),
+    // Trolley bags the rider brings, so both people know what to expect. Null only
+    // for trips created before this was asked; new trips must give a number.
+    trolleyBags: integer("trolley_bags"),
     status: text("status").notNull().default("open"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

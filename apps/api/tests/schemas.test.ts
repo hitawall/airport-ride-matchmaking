@@ -45,6 +45,7 @@ describe("rideRequestCreateSchema", () => {
     destinationLat: 12.97,
     destinationLng: 77.64,
     destinationLocalityLabel: "Indiranagar",
+    trolleyBags: 1,
   };
   it("defaults the airport to the primary one", () => {
     expect(rideRequestCreateSchema.parse(valid).airportCode).toBe("BLR");
@@ -59,6 +60,13 @@ describe("rideRequestCreateSchema", () => {
   });
   it("rejects an unsupported airport", () => {
     expect(rideRequestCreateSchema.safeParse({ ...valid, airportCode: "ZZZ" }).success).toBe(false);
+  });
+  it("requires the number of trolley bags, as a whole number from 0 to 6", () => {
+    const { trolleyBags, ...rest } = valid;
+    void trolleyBags;
+    expect(rideRequestCreateSchema.safeParse(rest).success).toBe(false);
+    for (const bad of [-1, 7, 1.5]) expect(rideRequestCreateSchema.safeParse({ ...valid, trolleyBags: bad }).success).toBe(false);
+    for (const good of [0, 1, 6]) expect(rideRequestCreateSchema.safeParse({ ...valid, trolleyBags: good }).success).toBe(true);
   });
   it("rejects coordinates outside the globe", () => {
     expect(rideRequestCreateSchema.safeParse({ ...valid, destinationLat: 91 }).success).toBe(false);

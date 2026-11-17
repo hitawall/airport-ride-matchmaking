@@ -11,6 +11,7 @@ import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
+import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
 
@@ -261,6 +262,12 @@ class _CandidateCard extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 _Photo(url: candidate.profilePhotoUrl, name: candidate.displayName),
+                // On the photo so it is never clipped and is seen before like or pass.
+                Positioned(
+                  top: AppSpacing.md,
+                  right: AppSpacing.md,
+                  child: TrolleyBagsBadge(count: candidate.trolleyBags, large: true),
+                ),
                 Positioned(
                   left: 0,
                   right: 0,

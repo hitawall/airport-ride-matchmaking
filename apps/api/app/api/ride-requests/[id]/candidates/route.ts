@@ -49,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const candidates = await db.execute(sql`
     SELECT rr.id, rr.user_id, rr.flight_number, rr.flight_arrival_at, rr.destination_locality_label,
-           rr.h3_cell_res7, rr.h3_cell_res8, rr.airport_code, rr.terminal,
+           rr.h3_cell_res7, rr.h3_cell_res8, rr.airport_code, rr.terminal, rr.trolley_bags,
            p.display_name, p.gender, p.profile_photo_url, p.bio,
            r.avg_rating, r.rating_count
     FROM ride_requests rr

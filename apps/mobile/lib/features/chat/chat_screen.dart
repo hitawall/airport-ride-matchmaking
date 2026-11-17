@@ -16,6 +16,7 @@ import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
 import "../../core/ui/tone.dart";
+import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../matching/fare_split.dart";
@@ -57,6 +58,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _matchStatus;
   String? _airportCode;
   String? _myAreaLabel;
+  int? _counterpartBags;
+  bool _bagsKnown = false;
   String? _counterpartAreaLabel;
   double? _counterpartAvgRating;
   int _counterpartRatingCount = 0;
@@ -126,6 +129,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _matchStatus = match["status"] as String?;
           _airportCode = match["airportCode"] as String?;
           _myAreaLabel = match["myDestinationLocalityLabel"] as String?;
+          _counterpartBags = (match["counterpartTrolleyBags"] as num?)?.toInt();
+          _bagsKnown = match.containsKey("counterpartTrolleyBags");
           _counterpartAreaLabel = match["counterpartDestinationLocalityLabel"] as String?;
           final avgRating = match["counterpartAvgRating"];
           _counterpartAvgRating = avgRating == null ? null : (avgRating as num).toDouble();
@@ -354,6 +359,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             constraints: const BoxConstraints(maxWidth: AppSpacing.maxContentWidth),
             child: Column(
               children: [
+                if (_bagsKnown)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                    child: Align(alignment: Alignment.centerLeft, child: TrolleyBagsBadge(count: _counterpartBags)),
+                  ),
                 if (_isActive && !_safetyDismissed)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),

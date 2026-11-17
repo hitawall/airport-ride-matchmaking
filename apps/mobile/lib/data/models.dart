@@ -40,8 +40,10 @@ class RideRequest {
     required this.destinationLocalityLabel,
     this.airportCode,
     this.terminal,
+    this.trolleyBags,
   });
 
+  final int? trolleyBags;
   final String id;
   final String status;
   final String? airportCode;
@@ -58,6 +60,7 @@ class RideRequest {
     destinationLocalityLabel: json["destinationLocalityLabel"] as String,
     airportCode: json["airportCode"] as String?,
     terminal: json["terminal"] as String?,
+    trolleyBags: (json["trolleyBags"] as num?)?.toInt(),
   );
 }
 
@@ -76,8 +79,10 @@ class Candidate {
     this.bio,
     this.avgRating,
     this.ratingCount = 0,
+    this.trolleyBags,
   });
 
+  final int? trolleyBags;
   final String rideRequestId;
   final String userId;
   final String displayName;
@@ -106,6 +111,7 @@ class Candidate {
     bio: json["bio"] as String?,
     avgRating: _toDouble(json["avg_rating"]),
     ratingCount: (_toDouble(json["rating_count"]) ?? 0).toInt(),
+    trolleyBags: (json["trolley_bags"] as num?)?.toInt(),
   );
 }
 

@@ -35,6 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       airportCode: rideRequests.airportCode,
       terminal: rideRequests.terminal,
       destinationLocalityLabel: rideRequests.destinationLocalityLabel,
+      trolleyBags: rideRequests.trolleyBags,
     })
     .from(rideRequests)
     .where(inArray(rideRequests.id, [match.rideRequestAId, match.rideRequestBId]));
@@ -49,6 +50,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     terminal: rideRequest?.terminal ?? null,
     myDestinationLocalityLabel: (iAmA ? tripA : tripB)?.destinationLocalityLabel ?? null,
     counterpartDestinationLocalityLabel: (iAmA ? tripB : tripA)?.destinationLocalityLabel ?? null,
+    myTrolleyBags: (iAmA ? tripA : tripB)?.trolleyBags ?? null,
+    counterpartTrolleyBags: (iAmA ? tripB : tripA)?.trolleyBags ?? null,
     counterpartDisplayName: counterpart?.displayName ?? null,
     counterpartPhotoUrl: counterpart?.profilePhotoUrl ?? null,
     counterpartAvgRating: stats.ratingCount ? Number(stats.avgRating) : null,

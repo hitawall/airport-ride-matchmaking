@@ -2,6 +2,9 @@ import { z } from "zod";
 import { DEFAULT_AIRPORT_CODE, findAirport, isValidTerminal } from "./airports";
 import { normalizePhoneNumber } from "./phone";
 
+/** Most trolley bags one rider can list. */
+export const MAX_TROLLEY_BAGS = 6;
+
 export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address");
 
 export const otpSendSchema = z.object({
@@ -48,6 +51,12 @@ export const rideRequestCreateSchema = z
   destinationLat: z.number().gte(-90).lte(90),
   destinationLng: z.number().gte(-180).lte(180),
   destinationLocalityLabel: z.string().min(1).max(120),
+  // Required: both riders should know how much luggage to expect.
+  trolleyBags: z
+    .number({ required_error: "Tell us how many trolley bags you have" })
+    .int("Enter a whole number of trolley bags")
+    .min(0)
+    .max(MAX_TROLLEY_BAGS),
   })
   .superRefine((value, ctx) => {
     if (!findAirport(value.airportCode)) {
