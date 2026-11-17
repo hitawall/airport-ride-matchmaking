@@ -110,7 +110,7 @@ class _MutualMatchScreenState extends ConsumerState<MutualMatchScreen> {
           Text("It's a match!", style: textTheme.displaySmall, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            "You and $name are heading the same way. Chat to coordinate meeting at the pickup zone.",
+            "You and $name are heading the same way. Chat to agree on a landmark to meet at, like a coffee shop or a pillar near the pickup zone.",
             textAlign: TextAlign.center,
             style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
           ),

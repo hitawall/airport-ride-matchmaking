@@ -287,6 +287,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (mounted && _loadingMessages) setState(() => _loadingMessages = false);
   }
 
+  /// Drops a friendly, editable meeting suggestion into the message box.
+  void _suggestMeetingSpot() {
+    final where = _meetingPoint == null ? "the pickup zone" : "the pickup zone at $_meetingPoint";
+    _inputController.text = "Hi! Shall we meet near a landmark at $where, like a coffee shop or the signboard? I'll be wearing ";
+    _inputController.selection = TextSelection.collapsed(offset: _inputController.text.length);
+  }
+
   Future<void> _send() async {
     final body = _inputController.text.trim();
     if (body.isEmpty || _sending) return;
@@ -448,7 +455,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     if (_messages.isEmpty) {
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -463,7 +470,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (_isActive) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  "Agree on where to meet at the pickup zone.",
+                  "Agree on a landmark you can both spot, like the windmills, a coffee shop or the pickup zone sign, and say what you are wearing.",
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -473,6 +480,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   spacing: AppSpacing.sm,
                   runSpacing: AppSpacing.sm,
                   children: [
+                    ActionChip(
+                      avatar: const Icon(Icons.place_outlined, size: 18),
+                      label: const Text("Suggest a spot"),
+                      onPressed: _suggestMeetingSpot,
+                    ),
                     for (final reply in _quickReplies)
                       ActionChip(
                         label: Text(reply),
