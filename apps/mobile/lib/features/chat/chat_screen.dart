@@ -370,7 +370,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: InfoBanner(
                       tone: AppTone.safety,
                       title: "Stay safe",
-                      message: "Meet at the official airport pickup zone, and check their photo before you share a cab.",
+                      message: "Meet at the official airport pickup zone, and check who you are meeting before you share a cab.",
                       action: IconButton(
                         icon: const Icon(Icons.close, size: 20),
                         tooltip: "Dismiss",

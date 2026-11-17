@@ -197,10 +197,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             const InfoBanner(
               tone: AppTone.info,
               icon: Icons.photo_camera_outlined,
-              title: "A photo is needed to match",
+              title: "Add a photo (optional)",
               message:
-                  "You can skip it for now, but you'll need one before you can search. "
-                  "It helps your match recognise you at pickup.",
+                  "A photo helps your match recognise you at pickup, and helps you get better matches. "
+                  "You can skip it and add one later.",
             ),
           ],
           const SectionHeader("About you"),

@@ -20,15 +20,13 @@ export async function POST(request: Request) {
   const db = getDb();
 
   const [profile] = await db
-    .select({ profilePhotoUrl: profiles.profilePhotoUrl })
+    .select({ userId: profiles.userId })
     .from(profiles)
     .where(eq(profiles.userId, userId))
     .limit(1);
-  if (!profile?.profilePhotoUrl) {
-    return jsonError(
-      "Add a profile photo before searching for a match. It helps your match recognize you at pickup.",
-      403,
-    );
+  // A profile is needed (name, gender), but the photo is optional.
+  if (!profile) {
+    return jsonError("Finish setting up your profile before searching for a match.", 403);
   }
 
   const [existingOpen] = await db

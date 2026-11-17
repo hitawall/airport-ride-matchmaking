@@ -42,7 +42,8 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
   String? _timeError;
   int? _trolleyBags;
   String? _bagsError;
-  bool _missingPhoto = false;
+  // Only used to nudge people who have not added a photo (it is optional).
+  bool _noPhoto = false;
 
   @override
   void dispose() {
@@ -107,19 +108,30 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     await _pickArrivalTime();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _checkPhoto();
+  }
+
+  Future<void> _checkPhoto() async {
+    try {
+      final profile = await ref.read(apiClientProvider).get("/api/profile/me") as Map<String, dynamic>;
+      final url = profile["profilePhotoUrl"] as String?;
+      if (mounted) setState(() => _noPhoto = url == null || url.isEmpty);
+    } catch (_) {
+      // the nudge is a nicety; never block the form on it
+    }
+  }
+
   Future<void> _addPhoto() async {
     await context.push("/profile-setup");
-    if (!mounted) return;
-    setState(() {
-      _error = null;
-      _missingPhoto = false;
-    });
+    if (mounted) await _checkPhoto();
   }
 
   Future<void> _submit(Airport airport) async {
     setState(() {
       _error = null;
-      _missingPhoto = false;
       _terminalError = _terminal == null ? "Choose the terminal you arrive at" : null;
       _destinationError = _destination == null ? "Choose your destination from the list" : null;
       _bagsError = _trolleyBags == null ? "Tell us how many trolley bags you have (0 is fine)" : null;
@@ -147,7 +159,6 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
     } on ApiException catch (e) {
       setState(() {
         _error = e.message;
-        _missingPhoto = e.statusCode == 403;
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -391,12 +402,16 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.xl),
+            InfoBanner(tone: AppTone.error, message: _error!),
+          ],
+          if (_noPhoto) ...[
+            const SizedBox(height: AppSpacing.xl),
             InfoBanner(
-              tone: _missingPhoto ? AppTone.warning : AppTone.error,
-              icon: _missingPhoto ? Icons.photo_camera_outlined : null,
-              title: _missingPhoto ? "Add a profile photo first" : null,
-              message: _error!,
-              action: _missingPhoto ? TextButton(onPressed: _addPhoto, child: const Text("Add photo")) : null,
+              tone: AppTone.info,
+              icon: Icons.photo_camera_outlined,
+              title: "Add a photo (optional)",
+              message: "A photo helps your match recognise you at pickup, and helps you get better matches.",
+              action: TextButton(onPressed: _addPhoto, child: const Text("Add photo")),
             ),
           ],
         ],

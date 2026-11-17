@@ -33,7 +33,7 @@ LegalDocument buildPrivacyPolicy() {
       ]),
       const LegalSection("What we collect", [
         "Account: your email address, used to sign you in with one-time codes.",
-        "Profile: your name, gender, matching preference (anyone, or same gender only), profile photo, optional bio and your mobile number.",
+        "Profile: your name, gender, matching preference (anyone, or same gender only), optional profile photo, optional bio and your mobile number.",
         "Trips: the flight number you enter or scan, when you plan to leave the airport, and the area you are heading to.",
         "Matching: the people you like or pass on, your matches and how they end.",
         "Messages: what you send in a chat with a match.",
@@ -92,11 +92,11 @@ LegalDocument buildTerms() {
         "We are not a taxi, ride-hailing or transport company. You book and pay for any ride yourself (for example with Uber, Ola or Rapido). We never handle payments, fares or bookings.",
       ]),
       const LegalSection("Who can use it", [
-        "You must be 18 or older, and the details you give must be true. One account per person, and your profile photo must be a photo of you.",
+        "You must be 18 or older, and the details you give must be true. One account per person, and if you add a profile photo it must be a photo of you.",
         "Keep access to your email secure. You are responsible for what happens on your account.",
       ]),
       const LegalSection("Meeting safely", [
-        "Meeting a stranger carries risk. Always meet at the official airport pickup zone in a public, well-lit place, check that the person matches their profile photo, and never share a cab if something feels wrong.",
+        "Meeting a stranger carries risk. Always meet at the official airport pickup zone in a public, well-lit place, check that the person is who they said they are (and matches their profile photo, if they have one), and never share a cab if something feels wrong.",
         "We do not verify identities beyond email, and we cannot guarantee anyone's behaviour. Decisions to meet, travel together or split costs are yours.",
       ]),
       const LegalSection("Rules", [
