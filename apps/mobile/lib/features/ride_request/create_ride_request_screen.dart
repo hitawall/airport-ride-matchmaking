@@ -338,18 +338,24 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
                         minWidth: constraints.maxWidth,
                         maxWidth: constraints.maxWidth,
                       ),
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: options.length,
-                        itemBuilder: (context, i) {
-                          final option = options.elementAt(i);
-                          return ListTile(
-                            leading: const Icon(Icons.place_outlined),
-                            title: Text(option.label),
-                            onTap: () => onSelected(option),
-                          );
-                        },
+                      // The page closes the keyboard when it is dragged. Scrolling
+                      // this list also reaches the page (the overlay belongs to it),
+                      // so it is stopped here, or the keyboard drops on every swipe.
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (_) => true,
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, i) {
+                            final option = options.elementAt(i);
+                            return ListTile(
+                              leading: const Icon(Icons.place_outlined),
+                              title: Text(option.label),
+                              onTap: () => onSelected(option),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
