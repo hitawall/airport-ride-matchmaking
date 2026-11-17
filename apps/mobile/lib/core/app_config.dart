@@ -30,6 +30,12 @@ class AppConfig {
   /// privacy policy and terms. Until then the pages carry a visible draft notice.
   static const legalReviewed = bool.fromEnvironment("LEGAL_REVIEWED");
 
+  /// OAuth client ID for "Continue with Google" (a public value, not a secret).
+  /// Empty hides the button. See docs/OWNER_INPUTS.md.
+  static const googleClientId = String.fromEnvironment("GOOGLE_CLIENT_ID");
+
+  static bool get hasGoogleSignIn => googleClientId.isNotEmpty;
+
   static bool get hasSupportEmail => supportEmail.isNotEmpty;
 
   /// Text to print where the operator name belongs.

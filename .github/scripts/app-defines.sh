@@ -8,7 +8,7 @@
 set -euo pipefail
 
 json="{}"
-for name in APP_NAME OPERATOR_NAME SUPPORT_EMAIL GRIEVANCE_OFFICER LEGAL_JURISDICTION WEB_APP_URL LEGAL_REVIEWED; do
+for name in APP_NAME OPERATOR_NAME SUPPORT_EMAIL GRIEVANCE_OFFICER LEGAL_JURISDICTION WEB_APP_URL LEGAL_REVIEWED GOOGLE_CLIENT_ID; do
   value="${!name:-}"
   if [ -n "$value" ]; then
     json=$(printf '%s' "$json" | jq --arg k "$name" --arg v "$value" '. + {($k): $v}')

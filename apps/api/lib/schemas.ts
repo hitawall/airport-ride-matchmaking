@@ -11,6 +11,10 @@ export const otpSendSchema = z.object({
   email: emailSchema,
 });
 
+export const googleSignInSchema = z.object({
+  accessToken: z.string().min(10, "Missing Google sign-in").max(4096),
+});
+
 export const otpVerifySchema = z.object({
   email: emailSchema,
   requestId: z.string().min(1),

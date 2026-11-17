@@ -6,8 +6,8 @@ to bottom; each says what to do, where the value goes, which issue it closes,
 and what happens next. Tick a box when done and tell me, and I will do the
 follow-up work (shown as "Then I...").
 
-Not covered here on purpose: iOS (#112, later), Ola Maps (#22), Google sign-in
-(#43). The custom domain (#46) appears because several steps depend on it.
+Not covered here on purpose: iOS (#112, later) and Ola Maps (#22). Google sign-in
+(#43, #195) is optional and is section K at the end. The custom domain (#46) appears because several steps depend on it.
 
 Where values go: **GitHub repo variables** = Settings > Secrets and variables >
 Actions > Variables. **GitHub secrets** = same page, Secrets tab. **Vercel env** =
@@ -80,6 +80,17 @@ Vercel > the *API* project > Settings > Environment Variables (Production).
 - [ ] **J5. Closed testing:** add the 12+ testers (A2), start the 14-day clock, collect feedback.
 - [ ] **J6. Apply for production access**, then release with a staged rollout (10%, 50%, 100%).
 
+## K. Google sign-in on the web (optional) - issues #43, #195
+
+The "Continue with Google" button is built and switched off. It appears once you do this:
+
+- [ ] **K1. Google Cloud project:** go to console.cloud.google.com, create a project (free). Under APIs & Services > OAuth consent screen choose External, fill in the app name, support email and your email, and add the scopes `openid`, `email`, `profile`. Publish it (move from Testing to In production) so anyone can sign in; these scopes need no Google review.
+- [ ] **K2. OAuth client ID:** APIs & Services > Credentials > Create credentials > OAuth client ID > **Web application**. Authorised JavaScript origins: `https://airpool.online` (and `http://localhost:8099` if you want to test locally). No redirect URIs are needed. Copy the client ID (it looks like `123456-abc.apps.googleusercontent.com`; it is public, not a secret).
+- [ ] **K3. Set the client ID in two places:** Vercel env (API, Production) `GOOGLE_CLIENT_ID`, and GitHub repo variable `GOOGLE_CLIENT_ID` (same value). Redeploy the API and re-run the web deploy.
+  Then I: test it end to end, and add it to the Android app once the package id and signing fingerprints exist (#111).
+
+People with an email-code account who sign in with Google using the same email land in the same account.
+
 ---
 
 ### Quick reference: every variable and secret
@@ -89,6 +100,7 @@ Vercel > the *API* project > Settings > Environment Variables (Production).
 | GitHub variable | `OPERATOR_NAME`, `SUPPORT_EMAIL`, `GRIEVANCE_OFFICER` | D1 |
 | GitHub variable | `APP_NAME`, `LEGAL_JURISDICTION`, `WEB_APP_URL` (optional) | D1 |
 | GitHub variable | `LEGAL_REVIEWED` = `true` | D3 |
+| GitHub variable | `GOOGLE_CLIENT_ID` (optional) | K3 |
 | GitHub secret | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | G2 |
 | GitHub secret | `PROD_CRON_SECRET` | I1 |
 | Vercel (API) | `RESEND_API_KEY`, `OTP_FROM_EMAIL` | C3 |
@@ -96,3 +108,4 @@ Vercel > the *API* project > Settings > Environment Variables (Production).
 | Vercel (API) | `MODERATION_EMAIL`, `MODERATION_TOKEN` | E1 |
 | Vercel (API) | `REVIEW_ACCOUNT_EMAIL`, `REVIEW_ACCOUNT_CODE` | F1 |
 | Vercel (API) | `SENTRY_DSN`, `POSTHOG_API_KEY`, `POSTHOG_HOST` | H2, H3 |
+| Vercel (API) | `GOOGLE_CLIENT_ID` (optional) | K3 |

@@ -27,6 +27,10 @@ export const env = {
     const code = process.env.REVIEW_ACCOUNT_CODE?.trim();
     return code && /^\d{6}$/.test(code) && code !== "000000" ? code : undefined;
   },
+  /** OAuth client ID for Google sign-in. Optional: unset means the feature is off. */
+  get googleClientId(): string | undefined {
+    return process.env.GOOGLE_CLIENT_ID?.trim() || undefined;
+  },
   get resendApiKey() {
     return required("RESEND_API_KEY");
   },
