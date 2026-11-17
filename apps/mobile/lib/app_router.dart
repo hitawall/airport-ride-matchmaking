@@ -18,6 +18,7 @@ import "features/ride_request/scan_boarding_pass_screen.dart";
 import "features/legal/delete_account_info_screen.dart";
 import "features/legal/legal_content.dart";
 import "features/legal/legal_document_screen.dart";
+import "features/notifications/notifications_screen.dart";
 import "features/settings/settings_screen.dart";
 
 const _publicPaths = {"/", "/email", "/otp", "/delete-account", "/privacy", "/terms"};
@@ -80,6 +81,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: "/resume-trip", builder: (context, state) => const ResumeTripScreen()),
       GoRoute(path: "/settings", builder: (context, state) => const SettingsScreen()),
+      GoRoute(path: "/notifications", builder: (context, state) => const NotificationsScreen()),
     ],
   );
 });

@@ -21,6 +21,7 @@ import "../../data/airports.dart";
 import "../../data/models.dart";
 import "../feedback/send_feedback_sheet.dart";
 import "../install/install.dart";
+import "../notifications/notifications_screen.dart";
 import "../ride_request/cancel_search.dart";
 
 /// The landing screen after login. Shows a greeting and the user's current
@@ -124,6 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return AppPage(
       onRefresh: _load,
       actions: [
+        const NotificationBell(),
         IconButton(
           icon: const Icon(Icons.settings_outlined),
           tooltip: "Settings",
