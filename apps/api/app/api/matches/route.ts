@@ -81,6 +81,29 @@ export async function POST(request: Request) {
   }
 
   if (existing.status === "rejected") return jsonError("This pair was already passed on", 409);
+
+  // They unmatched earlier but are free to meet again (only a block is
+  // permanent), so liking restarts the match as a fresh one-sided like.
+  if (existing.status === "unmatched") {
+    // Whoever likes first is always stored as side A, so swap the sides if needed.
+    const now = new Date();
+    const [restarted] = await db
+      .update(matches)
+      .set({
+        rideRequestAId: rideRequestId,
+        rideRequestBId: candidateRideRequestId,
+        userAId: userId,
+        userBId: candidate.userId,
+        status: "proposed_by_a",
+        respondedAtA: now,
+        respondedAtB: null,
+        updatedAt: now,
+      })
+      .where(eq(matches.id, existing.id))
+      .returning();
+    await track("match_like", userId);
+    return NextResponse.json(restarted);
+  }
   if (existing.status === "mutual") return NextResponse.json(existing);
 
   const amIUserA = existing.userAId === userId;

@@ -30,7 +30,7 @@ Neon API key, which is an owner input.
 
 ## Where each rule is tested
 
-- Matching (same airport and terminal, overlapping arrival windows, blocks, gender preference, an unmatched pair is never offered again): integration suite, "Ride requests and candidates" and "Unmatch".
+- Matching (same airport and terminal, overlapping arrival windows, blocks, gender preference, a passed-on person stays hidden but an unmatched pair can meet again): integration suite, "Ride requests and candidates" and "Unmatch".
 - Like, pass and mutual transitions, trips becoming matched: "Like, mutual match, chat and unread alerts".
 - Unmatch, ended-match alert, resume: "Unmatch tells the other person" and "Resuming a trip".
 - Expiry (matches, open trips, stuck trips): "Expiry sweep".
