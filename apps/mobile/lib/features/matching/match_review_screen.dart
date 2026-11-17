@@ -404,18 +404,23 @@ class _Photo extends StatelessWidget {
   final String? url;
   final String name;
 
-  Widget _fallback(BuildContext context) {
+  Widget _fallback(BuildContext context, {bool noPhoto = false}) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final trimmed = name.trim();
     return Container(
       color: scheme.primaryContainer,
       alignment: Alignment.center,
-      child: Text(
-        trimmed.isEmpty ? "?" : trimmed.characters.first.toUpperCase(),
-        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-          fontSize: 96,
-          color: scheme.onPrimaryContainer,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            trimmed.isEmpty ? "?" : trimmed.characters.first.toUpperCase(),
+            style: textTheme.displayLarge?.copyWith(fontSize: 96, color: scheme.onPrimaryContainer),
+          ),
+          if (noPhoto)
+            Text("No photo added", style: textTheme.bodyMedium?.copyWith(color: scheme.onPrimaryContainer)),
+        ],
       ),
     );
   }
@@ -423,7 +428,7 @@ class _Photo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photoUrl = url;
-    if (photoUrl == null || photoUrl.isEmpty) return _fallback(context);
+    if (photoUrl == null || photoUrl.isEmpty) return _fallback(context, noPhoto: true);
     return Image.network(
       photoUrl,
       fit: BoxFit.cover,

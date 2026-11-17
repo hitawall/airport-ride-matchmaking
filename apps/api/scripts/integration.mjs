@@ -59,7 +59,7 @@ let counter = 0;
 const created = [];
 
 /** A signed-in rider with a complete profile. */
-async function rider(name, { gender = "other", genderPreference = "any" } = {}) {
+async function rider(name, { gender = "other", genderPreference = "any", photo = true } = {}) {
   const email = `it-${stamp}-${++counter}@example.com`;
   const sent = await call("POST", "/auth/otp/send", null, { email });
   const v = await call("POST", "/auth/otp/verify", null, { email, requestId: sent.requestId, code: "000000" });
@@ -69,7 +69,7 @@ async function rider(name, { gender = "other", genderPreference = "any" } = {}) 
     gender,
     genderPreference,
     phoneNumber,
-    profilePhotoUrl: "https://example.com/p.jpg",
+    ...(photo ? { profilePhotoUrl: "https://example.com/p.jpg" } : {}),
   });
   const user = { ...v, name, phoneNumber, email };
   created.push(user);
@@ -133,6 +133,9 @@ await scenario("Ride requests and candidates", async () => {
   check("the number of trolley bags is required", (await raw("POST", "/ride-requests", a.token, { airportCode: "BLR", terminal: "T1", flightArrivalAt: inHours(36), destinationAddress: "x", destinationLat: 12.9, destinationLng: 77.6, destinationLocalityLabel: "x" })).status === 400);
 
   const ra = await trip(a);
+  const noPhoto = await rider("No photo", { photo: false });
+  const rNoPhoto = await trip(noPhoto);
+  check("a rider without a photo can place a request", !!rNoPhoto.id);
   await trip(same, { hours: 36.5 });
   await trip(otherTerminal, { terminal: "T2" });
   await trip(late, { hours: 40 });
@@ -142,6 +145,7 @@ await scenario("Ride requests and candidates", async () => {
 
   const ids = await candidates(a, ra);
   check("someone at the same terminal around the same time is a candidate", ids.includes(same.userId));
+  check("a rider without a photo is still a candidate", ids.includes(noPhoto.userId));
   check("a different terminal is never a candidate", !ids.includes(otherTerminal.userId));
   check("arrival times that do not overlap are never candidates", !ids.includes(late.userId));
   check("blocked people are never candidates", !ids.includes(blocked.userId));
