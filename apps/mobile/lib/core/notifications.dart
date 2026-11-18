@@ -5,6 +5,7 @@ import "package:flutter/services.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:material_ui/material_ui.dart";
 import "../app_router.dart";
+import "alert_sound.dart";
 import "api_client.dart";
 import "app_config.dart";
 import "app_theme.dart";
@@ -424,6 +425,7 @@ class NotificationController extends StateNotifier<NotificationState> {
         alert: next ?? state.alert,
         items: state.items,
       );
+      if (next != null) _chime();
       _updateTabTitle();
     } on ApiException {
       // transient; the next tick tries again
@@ -431,6 +433,16 @@ class NotificationController extends StateNotifier<NotificationState> {
       // never let alerts break the app
     } finally {
       _polling = false;
+    }
+  }
+
+  /// A short sound for a new notification, unless it was turned off in Settings.
+  Future<void> _chime() async {
+    try {
+      final off = await _ref.read(secureStorageProvider).readString(alertSoundStorageKey) == "off";
+      if (!off && mounted) _ref.read(alertSoundPlayerProvider)();
+    } catch (_) {
+      // sound is a nicety; never break alerts over it
     }
   }
 
