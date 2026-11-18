@@ -95,7 +95,7 @@ void main() {
 
   testWidgets("liking one person does not decide the others, and moves on to the next undecided", (tester) async {
     final (api, location) = await _open(tester, people);
-    await tester.tap(find.text("Like"));
+    await tester.tap(find.byKey(const ValueKey("like-button")));
     await tester.pumpAndSettle();
     expect(api.posts.single, {"path": "/api/matches", "rideRequestId": "r1", "candidateRideRequestId": "a", "action": "like"});
     expect(find.text("2 of 3"), findsOneWidget);
@@ -105,18 +105,18 @@ void main() {
     await tester.tap(find.byTooltip("Previous person"));
     await tester.pumpAndSettle();
     expect(find.text("You liked Asha"), findsOneWidget);
-    await tester.tap(find.text("Like"), warnIfMissed: false);
+    await tester.tap(find.byKey(const ValueKey("like-button")), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(api.posts, hasLength(1));
   });
 
   testWidgets("once everyone has an answer the rider is taken to the waiting screen", (tester) async {
     final (api, location) = await _open(tester, people);
-    await tester.tap(find.text("Pass"));
+    await tester.tap(find.byKey(const ValueKey("pass-button")));
     await tester.pumpAndSettle();
-    await tester.tap(find.text("Like"));
+    await tester.tap(find.byKey(const ValueKey("like-button")));
     await tester.pumpAndSettle();
-    await tester.tap(find.text("Pass"));
+    await tester.tap(find.byKey(const ValueKey("pass-button")));
     await tester.pumpAndSettle();
     expect(api.posts.map((p) => p["action"]), ["pass", "like", "pass"]);
     expect(location(), "/awaiting-match/r1");

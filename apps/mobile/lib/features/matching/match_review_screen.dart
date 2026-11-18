@@ -222,6 +222,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _RoundAction(
+                        key: const ValueKey("pass-button"),
                         label: "Pass",
                         icon: Icons.close_rounded,
                         background: AppTheme.surfaceWhite,
@@ -231,6 +232,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
                         onPressed: busy ? null : () => _act("pass"),
                       ),
                       _RoundAction(
+                        key: const ValueKey("like-button"),
                         label: "Like",
                         icon: Icons.favorite_rounded,
                         background: AppTheme.coral,
@@ -559,6 +561,7 @@ class _RoundAction extends StatelessWidget {
     required this.scale,
     required this.onPressed,
     this.outlined = false,
+    super.key,
   });
 
   final String label;
