@@ -177,7 +177,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
                   if (candidates.length > 1 && MediaQuery.sizeOf(context).height >= 640) ...[
                     const SizedBox(height: AppSpacing.sm),
                     SizedBox(
-                      height: 70,
+                      height: 80,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: candidates.length,
