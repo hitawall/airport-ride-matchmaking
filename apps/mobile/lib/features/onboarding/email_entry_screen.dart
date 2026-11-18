@@ -48,7 +48,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
     setState(() => _loading = true);
     try {
       final api = ref.read(apiClientProvider);
-      final result = await api.post("/api/auth/otp/send", {"email": email});
+      final result = await api.post("/api/auth/otp/send", {"email": email, "phoneNumber": phoneNumber});
       if (!mounted) return;
       ref.read(pendingSignupPhoneNumberProvider.notifier).state = phoneNumber;
       context.push(
@@ -60,7 +60,14 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
         },
       );
     } on ApiException catch (e) {
-      setState(() => _emailError = e.message);
+      // A number another account already has is a problem with the number, not the email.
+      setState(() {
+        if (e.statusCode == 409) {
+          _phoneError = e.message;
+        } else {
+          _emailError = e.message;
+        }
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }

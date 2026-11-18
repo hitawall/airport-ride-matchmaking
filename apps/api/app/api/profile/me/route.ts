@@ -3,9 +3,8 @@ import { and, eq, ne } from "drizzle-orm";
 import { getDb, profiles } from "@airport-ride-matchmaking/db";
 import { profileUpdateSchema } from "@/lib/schemas";
 import { jsonError, requireUserId } from "@/lib/api-response";
+import { PHONE_TAKEN_MESSAGE } from "@/lib/phone";
 
-const PHONE_TAKEN_MESSAGE =
-  "That mobile number is already used by another account. Use a different number, or sign in with the email you first used.";
 
 function isUniqueViolation(error: unknown): boolean {
   const e = error as { code?: string; cause?: { code?: string } } | null;

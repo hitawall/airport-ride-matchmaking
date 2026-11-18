@@ -117,6 +117,12 @@ await scenario("Google sign-in", async () => {
 await scenario("Profiles", async () => {
   const a = await rider("Asha");
   const other = await rider("Ravi");
+  const sendCode = (email, phoneNumber) => raw("POST", "/auth/otp/send", null, { email, phoneNumber });
+  const fresh = `it-${stamp}-fresh@example.com`;
+  const taken = await sendCode(fresh, a.phoneNumber);
+  check("signing up with a number another account has is refused before any code is sent", taken.status === 409, `got ${taken.status}`);
+  check("a free number is accepted", (await sendCode(fresh, "9" + String(Math.floor(100000000 + Math.random() * 899999999)))).status === 200);
+  check("an existing account can still sign in whatever number is typed", (await sendCode(a.email, other.phoneNumber)).status === 200);
   const dup = await raw("PUT", "/profile/me", other.token, {
     displayName: "Ravi",
     gender: "other",
