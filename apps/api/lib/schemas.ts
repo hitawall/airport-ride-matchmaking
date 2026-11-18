@@ -9,6 +9,9 @@ export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid 
 
 export const otpSendSchema = z.object({
   email: emailSchema,
+  // Sent by the sign-up screen so a number that already belongs to another
+  // account is refused before any code goes out. Optional for older clients.
+  phoneNumber: z.string().optional(),
 });
 
 export const googleSignInSchema = z.object({

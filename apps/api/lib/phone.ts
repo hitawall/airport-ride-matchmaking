@@ -32,3 +32,7 @@ export function normalizePhoneNumber(input: string): string | null {
   }
   return null;
 }
+
+/** Shown when a mobile number already belongs to another account. */
+export const PHONE_TAKEN_MESSAGE =
+  "That mobile number is already used by another account. Use a different number, or sign in with the email you first used.";

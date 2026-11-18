@@ -1,12 +1,13 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { getDb, otpRequests } from "@airport-ride-matchmaking/db";
+import { getDb, otpRequests, profiles, users } from "@airport-ride-matchmaking/db";
 import { otpSendSchema } from "@/lib/schemas";
 import { jsonError } from "@/lib/api-response";
 import { getOtpChannel } from "@/lib/otp";
 import { reviewAccountCode } from "@/lib/otp/review-account";
 import { env } from "@/lib/env";
+import { PHONE_TAKEN_MESSAGE, normalizePhoneNumber } from "@/lib/phone";
 
 const MAX_SENDS_PER_HOUR = 3;
 const OTP_TTL_SECONDS = 5 * 60;
@@ -15,9 +16,27 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = otpSendSchema.safeParse(body);
   if (!parsed.success) return jsonError(parsed.error.issues[0].message, 400);
-  const { email } = parsed.data;
+  const { email, phoneNumber } = parsed.data;
 
   const db = getDb();
+
+  // A new sign-up must not use a number another account already has. Check it
+  // now, before any code is sent or account created, rather than after the
+  // person has filled in their whole profile. Someone who already has an
+  // account is just signing in, so the number is ignored for them.
+  if (phoneNumber !== undefined) {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    if (!normalized) return jsonError("Enter a valid 10-digit Indian mobile number", 400);
+    const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    if (!existingUser) {
+      const [taken] = await db
+        .select({ userId: profiles.userId })
+        .from(profiles)
+        .where(eq(profiles.phoneNumber, normalized))
+        .limit(1);
+      if (taken) return jsonError(PHONE_TAKEN_MESSAGE, 409);
+    }
+  }
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const [{ count, oldest }] = await db
     .select({ count: sql<number>`count(*)::int`, oldest: sql<string | null>`min(${otpRequests.createdAt})` })
