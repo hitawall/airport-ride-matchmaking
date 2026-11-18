@@ -2,8 +2,9 @@ import "package:material_ui/material_ui.dart";
 import "../app_theme.dart";
 import "tokens.dart";
 
-/// Most trolley bags a rider can list (the API enforces the same limit).
-const maxTrolleyBags = 6;
+/// The choices are 0, 1, 2, 3 and "3+". "3+" is stored as this value, and any
+/// older trip with more bags than that is shown the same way.
+const manyTrolleyBags = 4;
 
 /// Plain words for how much luggage someone brings. Null means the trip was
 /// created before this was asked.
@@ -11,6 +12,7 @@ String trolleyBagsLabel(int? count) => switch (count) {
   null => "Luggage not given",
   0 => "No trolley bags",
   1 => "1 trolley bag",
+  >= manyTrolleyBags => "3+ trolley bags",
   _ => "$count trolley bags",
 };
 

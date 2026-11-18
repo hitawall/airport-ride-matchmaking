@@ -310,7 +310,7 @@ class _OverviewChip extends StatelessWidget {
                 ),
                 Text(firstName, style: textTheme.labelMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(
-                  bags == null ? "" : "$bags bag${bags == 1 ? "" : "s"}",
+                  bags == null ? "" : (bags >= manyTrolleyBags ? "3+ bags" : "$bags bag${bags == 1 ? "" : "s"}"),
                   style: textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
                   maxLines: 1,
                 ),

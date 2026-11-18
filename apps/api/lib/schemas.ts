@@ -2,8 +2,8 @@ import { z } from "zod";
 import { DEFAULT_AIRPORT_CODE, findAirport, isValidTerminal } from "./airports";
 import { normalizePhoneNumber } from "./phone";
 
-/** Most trolley bags one rider can list. */
-export const MAX_TROLLEY_BAGS = 6;
+/** Most trolley bags one rider can list; 4 means "3 or more". */
+export const MAX_TROLLEY_BAGS = 4;
 
 export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address");
 

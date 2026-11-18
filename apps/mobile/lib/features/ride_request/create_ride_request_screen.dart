@@ -373,9 +373,9 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              for (var n = 0; n <= maxTrolleyBags; n++)
+              for (var n = 0; n <= manyTrolleyBags; n++)
                 ChoiceChip(
-                  label: Text("$n"),
+                  label: Text(n == manyTrolleyBags ? "3+" : "$n"),
                   tooltip: trolleyBagsLabel(n),
                   selected: _trolleyBags == n,
                   onSelected: (_) => setState(() {

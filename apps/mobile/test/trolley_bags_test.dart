@@ -17,6 +17,8 @@ void main() {
       expect(trolleyBagsLabel(0), "No trolley bags");
       expect(trolleyBagsLabel(1), "1 trolley bag");
       expect(trolleyBagsLabel(3), "3 trolley bags");
+      expect(trolleyBagsLabel(4), "3+ trolley bags");
+      expect(trolleyBagsLabel(6), "3+ trolley bags", reason: "older trips with more bags read the same");
       expect(trolleyBagsLabel(null), "Luggage not given");
     });
   });
@@ -124,6 +126,9 @@ void createFormTests() {
     expect(find.text("Tell us how many trolley bags you have (0 is fine)"), findsOneWidget);
     expect(api.posts, isEmpty);
 
+    expect(find.widgetWithText(ChoiceChip, "3+"), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, "4"), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, "6"), findsNothing);
     await tester.tap(find.widgetWithText(ChoiceChip, "2"));
     await tester.pumpAndSettle();
     expect(find.text("Tell us how many trolley bags you have (0 is fine)"), findsNothing);
