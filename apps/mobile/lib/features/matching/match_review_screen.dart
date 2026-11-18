@@ -1,4 +1,3 @@
-import "dart:async";
 import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -7,6 +6,7 @@ import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
 import "../../core/home_leading_button.dart";
 import "../../core/ui/app_page.dart";
+import "../../core/ui/avatar.dart";
 import "../../core/ui/dialogs.dart";
 import "../../core/ui/formatters.dart";
 import "../../core/ui/state_views.dart";
@@ -15,13 +15,14 @@ import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
 import "../../data/models.dart";
 
-const _swipeThreshold = 120.0;
-const _flyDistance = 700.0;
-const _animDuration = Duration(milliseconds: 220);
+const _pageDuration = Duration(milliseconds: 220);
 
 // Keeps snackbars above the Pass / Like buttons so they never cover them.
 const _snackInset = 132.0;
 
+/// Shows everyone who could share the ride. The rider browses all of them
+/// (swipe, the arrows, or the strip of faces) and only then likes the ones they
+/// would be happy to travel with; deciding on one never forces the next.
 class MatchReviewScreen extends ConsumerStatefulWidget {
   const MatchReviewScreen({required this.rideRequestId, required this.candidates, super.key});
 
@@ -33,72 +34,46 @@ class MatchReviewScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
+  final _pages = PageController();
   int _index = 0;
   bool _loading = false;
-  bool _animating = false;
-  Offset _dragOffset = Offset.zero;
 
-  double get _likeProgress => (_dragOffset.dx / _swipeThreshold).clamp(0, 1);
-  double get _passProgress => (-_dragOffset.dx / _swipeThreshold).clamp(0, 1);
+  /// What the rider did with each person, by ride request id: "like" or "pass".
+  final _decisions = <String, String>{};
 
-  void _onPanUpdate(DragUpdateDetails details) {
-    if (_animating) return;
-    setState(() => _dragOffset += details.delta);
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
   }
 
-  void _onPanEnd(DragEndDetails details) {
-    if (_animating) return;
-    final dx = _dragOffset.dx;
-    final velocity = details.velocity.pixelsPerSecond.dx;
-    final triggered = dx.abs() > _swipeThreshold || velocity.abs() > 700;
-    if (triggered) {
-      unawaited(_trigger(dx >= 0 ? "like" : "pass"));
-    } else {
-      setState(() {
-        _animating = true;
-        _dragOffset = Offset.zero;
-      });
-      Future.delayed(_animDuration, () {
-        if (mounted) setState(() => _animating = false);
-      });
-    }
+  bool get _allDecided => widget.candidates.every((c) => _decisions.containsKey(c.rideRequestId));
+
+  void _goTo(int index) {
+    if (index < 0 || index >= widget.candidates.length) return;
+    _pages.animateToPage(index, duration: _pageDuration, curve: Curves.easeOut);
   }
 
-  /// Shared by both the swipe gesture and the Like/Pass buttons: animates the
-  /// card off-screen, then performs the actual match action, then resets for
-  /// whatever the next card is.
-  Future<void> _trigger(String action) async {
-    if (_loading || _animating) return;
-    final flyDx = action == "like" ? _flyDistance : -_flyDistance;
-    setState(() {
-      _animating = true;
-      _dragOffset = Offset(flyDx, _dragOffset.dy);
-    });
-    await Future.delayed(_animDuration);
-    final indexBefore = _index;
-    await _act(action);
-    if (!mounted) return;
-    if (_index == indexBefore) {
-      // The action failed and this is still the same card: slide it back.
-      setState(() => _dragOffset = Offset.zero);
-      await Future.delayed(_animDuration);
+  /// The next person after the current one who has no decision yet (wrapping
+  /// round), or null when everyone has one.
+  int? _nextUndecided() {
+    final count = widget.candidates.length;
+    for (var step = 1; step < count; step++) {
+      final i = (_index + step) % count;
+      if (!_decisions.containsKey(widget.candidates[i].rideRequestId)) return i;
     }
-    if (mounted) {
-      setState(() {
-        _dragOffset = Offset.zero;
-        _animating = false;
-      });
-    }
+    return null;
   }
 
   Future<void> _act(String action) async {
-    if (_index >= widget.candidates.length) return;
+    if (_loading || _index >= widget.candidates.length) return;
     final candidate = widget.candidates[_index];
+    if (_decisions.containsKey(candidate.rideRequestId)) return;
     setState(() => _loading = true);
 
     Map<String, dynamic>? result;
     String? errorMessage;
-    var advance = true;
+    var recorded = true;
     try {
       final api = ref.read(apiClientProvider);
       result = await api.post("/api/matches", {
@@ -109,11 +84,11 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
     } on ApiException catch (e) {
       // The candidate may have already been excluded server-side (matched
       // elsewhere, already rejected) -- that's not a failure from the user's
-      // perspective, just advance. Anything else, keep the card so the user
-      // can try again instead of silently losing this person.
+      // perspective. Anything else, leave the card undecided so the user can
+      // try again instead of silently losing this person.
       if (e.statusCode != 409) {
         errorMessage = e.message;
-        advance = false;
+        recorded = false;
       }
     }
     if (!mounted) return;
@@ -125,7 +100,7 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
 
     setState(() {
       _loading = false;
-      if (advance) _index++;
+      if (recorded) _decisions[candidate.rideRequestId] = action;
     });
 
     if (errorMessage != null) {
@@ -138,24 +113,29 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
       bottomInset: _snackInset,
     );
 
-    if (_index >= widget.candidates.length) {
+    if (_allDecided) {
       context.go("/awaiting-match/${widget.rideRequestId}");
+      return;
     }
+    final next = _nextUndecided();
+    if (next != null) _goTo(next);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_index >= widget.candidates.length) {
+    final candidates = widget.candidates;
+    if (candidates.isEmpty) {
       return AppPage(
         leading: homeLeadingButton(context),
         title: "Possible matches",
         body: const SizedBox(height: 360, child: LoadingView()),
       );
     }
-    final candidate = widget.candidates[_index];
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
-    final busy = _loading || _animating;
+    final current = candidates[_index];
+    final decided = _decisions[current.rideRequestId];
+    final busy = _loading || decided != null;
 
     return Scaffold(
       appBar: AppBar(leading: homeLeadingButton(context), title: const Text("Possible matches")),
@@ -167,41 +147,71 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
               padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, 0, AppSpacing.gutter, AppSpacing.lg),
               child: Column(
                 children: [
-                  Text("${_index + 1} of ${widget.candidates.length}", style: textTheme.labelLarge),
-                  if (_index == 0)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        tooltip: "Previous person",
+                        onPressed: _index > 0 ? () => _goTo(_index - 1) : null,
+                      ),
+                      Text("${_index + 1} of ${candidates.length}", style: textTheme.labelLarge),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        tooltip: "Next person",
+                        onPressed: _index < candidates.length - 1 ? () => _goTo(_index + 1) : null,
+                      ),
+                    ],
+                  ),
+                  // Said until the rider has made a first choice, then out of the way.
+                  if (_decisions.isEmpty)
                     Text(
-                      "Swipe right to like, left to pass",
+                      candidates.length > 1
+                          ? "Look at everyone first, then like the people you'd be happy to share with. "
+                              "Whoever likes you back first becomes your match."
+                          : "Like them if you'd be happy to share the ride.",
                       style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
                     ),
-                  const SizedBox(height: AppSpacing.md),
+                  // The strip needs room; on very short screens the arrows and swipe do the job.
+                  if (candidates.length > 1 && MediaQuery.sizeOf(context).height >= 640) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: candidates.length,
+                        separatorBuilder: (context, i) => const SizedBox(width: AppSpacing.sm),
+                        itemBuilder: (context, i) => _OverviewChip(
+                          candidate: candidates[i],
+                          decision: _decisions[candidates[i].rideRequestId],
+                          selected: i == _index,
+                          onTap: () => _goTo(i),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
                   Expanded(
-                    child: AnimatedContainer(
-                      duration: _animating ? _animDuration : Duration.zero,
-                      curve: Curves.easeOut,
-                      transform: Matrix4.rotationZ(_dragOffset.dx / 900)
-                        ..setTranslationRaw(_dragOffset.dx, _dragOffset.dy, 0),
-                      transformAlignment: Alignment.center,
-                      child: GestureDetector(
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
+                    child: PageView.builder(
+                      controller: _pages,
+                      itemCount: candidates.length,
+                      onPageChanged: (i) => setState(() => _index = i),
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            _CandidateCard(candidate: candidate),
-                            _SwipeStamp(
-                              label: "LIKE",
-                              color: scheme.primary,
-                              opacity: _likeProgress,
-                              alignment: Alignment.topRight,
-                              angle: -0.3,
-                            ),
-                            _SwipeStamp(
-                              label: "PASS",
-                              color: scheme.secondary,
-                              opacity: _passProgress,
-                              alignment: Alignment.topLeft,
-                              angle: 0.3,
-                            ),
+                            _CandidateCard(candidate: candidates[i]),
+                            if (_decisions[candidates[i].rideRequestId] != null)
+                              Positioned(
+                                top: AppSpacing.md,
+                                left: AppSpacing.md,
+                                child: _DecisionTag(
+                                  liked: _decisions[candidates[i].rideRequestId] == "like",
+                                  name: candidates[i].displayName,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -212,21 +222,23 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _RoundAction(
+                        key: const ValueKey("pass-button"),
                         label: "Pass",
                         icon: Icons.close_rounded,
                         background: AppTheme.surfaceWhite,
                         foreground: AppTheme.plum,
                         outlined: true,
-                        scale: 1 + 0.2 * _passProgress,
-                        onPressed: busy ? null : () => _trigger("pass"),
+                        scale: 1,
+                        onPressed: busy ? null : () => _act("pass"),
                       ),
                       _RoundAction(
+                        key: const ValueKey("like-button"),
                         label: "Like",
                         icon: Icons.favorite_rounded,
                         background: AppTheme.coral,
                         foreground: Colors.white,
-                        scale: 1 + 0.2 * _likeProgress,
-                        onPressed: busy ? null : () => _trigger("like"),
+                        scale: 1,
+                        onPressed: busy ? null : () => _act("like"),
                       ),
                     ],
                   ),
@@ -235,6 +247,108 @@ class _MatchReviewScreenState extends ConsumerState<MatchReviewScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One person in the strip above the card: face, first name, and what the
+/// rider has done with them, so everyone can be compared at a glance.
+class _OverviewChip extends StatelessWidget {
+  const _OverviewChip({required this.candidate, required this.decision, required this.selected, required this.onTap});
+
+  final Candidate candidate;
+  final String? decision;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final firstName = candidate.displayName.trim().split(" ").first;
+    final status = switch (decision) {
+      "like" => ", liked",
+      "pass" => ", passed",
+      _ => "",
+    };
+    final bags = candidate.trolleyBags;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: "${candidate.displayName}, ${trolleyBagsLabel(bags)}$status",
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        onTap: onTap,
+        child: Container(
+          width: 80,
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            border: Border.all(color: selected ? scheme.primary : AppTheme.line, width: selected ? 2 : 1),
+          ),
+          child: Opacity(
+            opacity: decision == "pass" ? 0.5 : 1,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    AppAvatar(imageUrl: candidate.profilePhotoUrl, name: candidate.displayName, radius: 16),
+                    if (decision != null)
+                      Positioned(
+                        right: -4,
+                        bottom: -4,
+                        child: Icon(
+                          decision == "like" ? Icons.favorite : Icons.close_rounded,
+                          size: 16,
+                          color: decision == "like" ? scheme.primary : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+                Text(firstName, style: textTheme.labelMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  bags == null ? "" : "$bags bag${bags == 1 ? "" : "s"}",
+                  style: textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DecisionTag extends StatelessWidget {
+  const _DecisionTag({required this.liked, required this.name});
+
+  final bool liked;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: liked ? scheme.primary : AppTheme.line, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(liked ? Icons.favorite : Icons.close_rounded, size: 16, color: liked ? scheme.primary : scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            liked ? "You liked $name" : "You passed",
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
@@ -447,6 +561,7 @@ class _RoundAction extends StatelessWidget {
     required this.scale,
     required this.onPressed,
     this.outlined = false,
+    super.key,
   });
 
   final String label;
@@ -482,58 +597,6 @@ class _RoundAction extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(label, style: Theme.of(context).textTheme.labelMedium),
         ],
-      ),
-    );
-  }
-}
-
-class _SwipeStamp extends StatelessWidget {
-  const _SwipeStamp({
-    required this.label,
-    required this.color,
-    required this.opacity,
-    required this.alignment,
-    required this.angle,
-  });
-
-  final String label;
-  final Color color;
-  final double opacity;
-  final Alignment alignment;
-  final double angle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        child: Align(
-          alignment: alignment,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Opacity(
-              opacity: opacity,
-              child: Transform.rotate(
-                angle: angle,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    border: Border.all(color: color, width: 3),
-                    borderRadius: BorderRadius.circular(AppRadii.sm),
-                  ),
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
