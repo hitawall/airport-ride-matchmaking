@@ -2,6 +2,7 @@ import "package:flutter/services.dart";
 import "package:material_ui/material_ui.dart";
 import "../phone.dart";
 import "tokens.dart";
+import "required_label.dart";
 
 /// A mobile-number field with a country-code picker in front of it. The picker
 /// lists [supportedPhoneCountries], which is only India today, so it shows
@@ -43,7 +44,7 @@ class PhoneField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
-        labelText: "Mobile number",
+        label: const RequiredLabel("Mobile number"),
         hintText: country.example,
         helperText: helperText,
         errorText: errorText,

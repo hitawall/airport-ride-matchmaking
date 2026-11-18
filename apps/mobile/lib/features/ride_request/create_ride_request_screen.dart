@@ -13,6 +13,7 @@ import "../../core/ui/formatters.dart";
 import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
+import "../../core/ui/required_label.dart";
 import "../../core/ui/tone.dart";
 import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
@@ -221,7 +222,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
           if (catalog.airports.length > 1)
             DropdownButtonFormField<Airport>(
               initialValue: airport,
-              decoration: const InputDecoration(labelText: "Airport", prefixIcon: Icon(Icons.flight_land_outlined)),
+              decoration: const InputDecoration(label: RequiredLabel("Airport"), prefixIcon: Icon(Icons.flight_land_outlined)),
               items: [
                 for (final a in catalog.airports)
                   DropdownMenuItem(value: a, child: Text("${a.city} (${a.code})")),
@@ -232,14 +233,11 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             )
           else
             InputDecorator(
-              decoration: const InputDecoration(labelText: "Airport", prefixIcon: Icon(Icons.flight_land_outlined)),
+              decoration: const InputDecoration(label: RequiredLabel("Airport"), prefixIcon: Icon(Icons.flight_land_outlined)),
               child: Text("${airport.name} (${airport.code})"),
             ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            "Terminal",
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
+          RequiredLabel("Terminal", style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
@@ -321,7 +319,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: "Destination area",
+                  label: const RequiredLabel("Destination area"),
                   hintText: "Search for your area",
                   prefixIcon: const Icon(Icons.place_outlined),
                   errorText: _destinationError,
@@ -370,7 +368,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
               ),
             ),
           ),
-          const _StepLabel(number: 4, text: "How much luggage do you have?"),
+          const _StepLabel(number: 4, text: "How much luggage do you have?", required: true),
           Text(
             "Trolley bags (the wheeled ones). Your match sees this before they decide.",
             style: Theme.of(context).textTheme.bodySmall,
@@ -406,7 +404,7 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             readOnly: true,
             onTap: _pickArrivalTime,
             decoration: InputDecoration(
-              labelText: "Pickup time",
+              label: const RequiredLabel("Pickup time"),
               hintText: "Pick a day and time",
               prefixIcon: const Icon(Icons.schedule),
               suffixIcon: const Icon(Icons.expand_more),
@@ -434,10 +432,11 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
 }
 
 class _StepLabel extends StatelessWidget {
-  const _StepLabel({required this.number, required this.text});
+  const _StepLabel({required this.number, required this.text, this.required = false});
 
   final int number;
   final String text;
+  final bool required;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +454,11 @@ class _StepLabel extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.titleSmall)),
+          Expanded(
+            child: required
+                ? RequiredLabel(text, style: Theme.of(context).textTheme.titleSmall)
+                : Text(text, style: Theme.of(context).textTheme.titleSmall),
+          ),
         ],
       ),
     );
