@@ -38,7 +38,8 @@ export const phoneNumberSchema = z.string().transform((value, ctx) => {
 
 export const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(80),
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]),
+  // "prefer_not_to_say" is no longer offered; older profiles keep it until edited.
+  gender: z.enum(["male", "female", "other"], { errorMap: () => ({ message: "Choose your gender" }) }),
   genderPreference: z.enum(["any", "same_gender_only"]),
   homeLocalityLabel: z.string().max(120).optional(),
   bio: z.string().max(280).optional(),

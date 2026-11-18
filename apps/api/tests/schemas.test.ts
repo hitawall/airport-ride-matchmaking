@@ -32,6 +32,10 @@ describe("profileUpdateSchema", () => {
   it("requires a valid phone number", () => {
     expect(profileUpdateSchema.safeParse({ ...valid, phoneNumber: "123" }).success).toBe(false);
   });
+  it("needs a gender of male, female or other", () => {
+    for (const good of ["male", "female", "other"]) expect(profileUpdateSchema.safeParse({ ...valid, gender: good }).success).toBe(true);
+    for (const bad of ["prefer_not_to_say", "", undefined]) expect(profileUpdateSchema.safeParse({ ...valid, gender: bad }).success).toBe(false);
+  });
   it("limits the bio length", () => {
     expect(profileUpdateSchema.safeParse({ ...valid, bio: "x".repeat(281) }).success).toBe(false);
   });

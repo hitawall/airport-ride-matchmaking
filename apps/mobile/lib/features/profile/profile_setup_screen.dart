@@ -21,7 +21,6 @@ const _genders = {
   "female": "Female",
   "male": "Male",
   "other": "Other",
-  "prefer_not_to_say": "Prefer not to say",
 };
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -36,7 +35,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _bioController = TextEditingController();
   final _phoneController = TextEditingController();
   PhoneCountry _country = defaultPhoneCountry;
-  String _gender = "prefer_not_to_say";
+  // Required: no default, so nobody ends up with a gender they did not choose.
+  String? _gender;
   String _genderPreference = "any";
   String? _existingPhotoUrl;
   Uint8List? _photoBytes;
@@ -49,6 +49,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String? _error;
   String? _nameError;
   String? _phoneError;
+  String? _genderError;
 
   bool get _hasPhoto => _photoBytes != null || _existingPhotoUrl != null;
 
@@ -74,7 +75,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       if (!mounted) return;
       setState(() {
         _nameController.text = profile["displayName"] as String? ?? "";
-        _gender = profile["gender"] as String? ?? _gender;
+        // Older profiles that chose "prefer not to say" are asked to pick one.
+        final savedGender = profile["gender"] as String?;
+        _gender = _genders.containsKey(savedGender) ? savedGender : null;
         _genderPreference = profile["genderPreference"] as String? ?? _genderPreference;
         _bioController.text = profile["bio"] as String? ?? "";
         _phoneController.text = phoneForInput(profile["phoneNumber"] as String?);
@@ -108,6 +111,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     setState(() {
       _error = null;
       _nameError = name.isEmpty ? "Tell us what to call you" : null;
+      _genderError = _gender == null ? "Choose your gender to continue" : null;
       if (!phoneValid) {
         _phoneError = _isNewProfile && rawPhone.isEmpty
             ? "Add your phone number to continue"
@@ -116,7 +120,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _phoneError = null;
       }
     });
-    if (name.isEmpty || !phoneValid) return;
+    if (name.isEmpty || !phoneValid || _gender == null) return;
 
     setState(() => _saving = true);
     try {
@@ -248,6 +252,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 RequiredLabel("I identify as", style: textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  "We need this because you can choose to be matched only with travelers of your own gender.",
+                  style: textTheme.bodySmall,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
@@ -257,10 +266,17 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       ChoiceChip(
                         label: Text(entry.value),
                         selected: _gender == entry.key,
-                        onSelected: (_) => setState(() => _gender = entry.key),
+                        onSelected: (_) => setState(() {
+                          _gender = entry.key;
+                          _genderError = null;
+                        }),
                       ),
                   ],
                 ),
+                if (_genderError != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(_genderError!, style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
+                ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                   child: Divider(),

@@ -19,6 +19,10 @@ import "../../core/ui/trolley_bags.dart";
 import "../../data/airports.dart";
 import "pass_file.dart";
 
+/// Scanning or uploading a boarding pass is built and working, but switched off
+/// in the app for now. Set this to true to show it again.
+const boardingPassEnabled = false;
+
 class CreateRideRequestScreen extends ConsumerStatefulWidget {
   const CreateRideRequestScreen({super.key});
 
@@ -272,23 +276,26 @@ class _CreateRideRequestScreenState extends ConsumerState<CreateRideRequestScree
             textCapitalization: TextCapitalization.characters,
             decoration: InputDecoration(
               labelText: "Flight number (optional)",
-              helperText: "Or scan or upload your boarding pass to fill it in",
+              helperText: boardingPassEnabled ? "Or scan or upload your boarding pass to fill it in" : null,
               prefixIcon: const Icon(Icons.flight_land_outlined),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.document_scanner_outlined),
-                tooltip: "Scan boarding pass",
-                onPressed: _scanBoardingPass,
+              suffixIcon: boardingPassEnabled
+                  ? IconButton(
+                      icon: const Icon(Icons.document_scanner_outlined),
+                      tooltip: "Scan boarding pass",
+                      onPressed: _scanBoardingPass,
+                    )
+                  : null,
+            ),
+          ),
+          if (boardingPassEnabled)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _uploadBoardingPass,
+                icon: const Icon(Icons.upload_file_outlined),
+                label: Text(canReadPassPdf ? "Upload a boarding pass (PDF or photo)" : "Choose a boarding pass photo"),
               ),
             ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _uploadBoardingPass,
-              icon: const Icon(Icons.upload_file_outlined),
-              label: Text(canReadPassPdf ? "Upload a boarding pass (PDF or photo)" : "Choose a boarding pass photo"),
-            ),
-          ),
           const _StepLabel(number: 3, text: "Where to?"),
           LayoutBuilder(
             builder: (context, constraints) => Autocomplete<Locality>(
