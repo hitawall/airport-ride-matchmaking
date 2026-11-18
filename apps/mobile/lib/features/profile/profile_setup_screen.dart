@@ -14,6 +14,7 @@ import "../../core/ui/avatar.dart";
 import "../../core/ui/info_banner.dart";
 import "../../core/ui/state_views.dart";
 import "../../core/ui/tokens.dart";
+import "../../core/ui/required_label.dart";
 import "../../core/ui/tone.dart";
 
 const _genders = {
@@ -221,7 +222,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     if (_nameError != null) setState(() => _nameError = null);
                   },
                   decoration: InputDecoration(
-                    labelText: "Display name",
+                    label: const RequiredLabel("Display name"),
                     helperText: "Shown to your match and in chat",
                     errorText: _nameError,
                   ),
@@ -246,7 +247,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("I identify as", style: textTheme.titleSmall),
+                RequiredLabel("I identify as", style: textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
