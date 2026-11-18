@@ -46,6 +46,8 @@ Future<int> _chimes({required MemoryStorage storage, int polls = 1}) async {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test("a new notification plays the sound once, not again for the same event", () async {
     expect(await _chimes(storage: MemoryStorage(), polls: 3), 1);
   });
