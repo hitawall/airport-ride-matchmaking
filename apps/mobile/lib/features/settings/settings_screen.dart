@@ -1,6 +1,7 @@
 import "package:material_ui/material_ui.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
+import "../../core/alert_sound.dart";
 import "../../core/api_client.dart";
 import "../../core/app_theme.dart";
 import "../../core/auth_controller.dart";
@@ -27,11 +28,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _name;
   String? _photoUrl;
   bool _shareUsage = Telemetry.enabled;
+  bool _soundOn = true;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadSound();
+  }
+
+  Future<void> _loadSound() async {
+    final stored = await ref.read(secureStorageProvider).readString(alertSoundStorageKey);
+    if (mounted) setState(() => _soundOn = stored != "off");
   }
 
   Future<void> _loadProfile() async {
@@ -95,6 +103,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Icon(Icons.chevron_right),
               ],
             ),
+          ),
+          const SectionHeader("Notifications"),
+          _Group(
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.volume_up_outlined),
+                title: const Text("Notification sound"),
+                subtitle: const Text("A short sound when a match, like or message comes in while the app is open."),
+                value: _soundOn,
+                onChanged: (value) async {
+                  setState(() => _soundOn = value);
+                  await ref.read(secureStorageProvider).writeString(alertSoundStorageKey, value ? "on" : "off");
+                  if (value) ref.read(alertSoundPlayerProvider)();
+                },
+              ),
+            ],
           ),
           const SectionHeader("Rides and safety"),
           _Group(
