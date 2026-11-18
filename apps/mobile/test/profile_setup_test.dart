@@ -75,4 +75,33 @@ void main() {
     expect(find.widgetWithText(TextField, "Mobile number"), findsOneWidget);
     expect(find.text("Used the wrong email? Start over"), findsNothing);
   });
+
+  testWidgets("gender is required, offers only Male, Female and Other, and says why", (tester) async {
+    await _open(tester, pendingPhone: "+919876543210");
+    expect(find.widgetWithText(ChoiceChip, "Male"), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, "Female"), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, "Other"), findsOneWidget);
+    expect(find.text("Prefer not to say"), findsNothing);
+    expect(find.textContaining("matched only with travelers of your own gender"), findsOneWidget);
+    expect(tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).where((c) => c.selected), isEmpty);
+
+    await tester.enterText(find.widgetWithText(TextField, "Display name"), "Asha");
+    await tester.tap(find.text("Continue"));
+    await tester.pumpAndSettle();
+    expect(find.text("Choose your gender to continue"), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, "Other"));
+    await tester.pumpAndSettle();
+    expect(find.text("Choose your gender to continue"), findsNothing);
+  });
+
+  testWidgets("an older profile that said prefer not to say is asked to choose", (tester) async {
+    await _open(tester, existing: {
+      "displayName": "Asha",
+      "gender": "prefer_not_to_say",
+      "genderPreference": "any",
+      "phoneNumber": "+919876543210",
+    });
+    expect(tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).where((c) => c.selected), isEmpty);
+  });
 }

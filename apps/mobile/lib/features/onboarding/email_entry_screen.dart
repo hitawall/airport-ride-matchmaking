@@ -8,6 +8,7 @@ import "../../core/ui/app_buttons.dart";
 import "../../core/ui/app_page.dart";
 import "../../core/ui/phone_field.dart";
 import "../../core/ui/tokens.dart";
+import "../../core/ui/required_label.dart";
 import "google_sign_in.dart";
 
 class EmailEntryScreen extends ConsumerStatefulWidget {
@@ -129,7 +130,7 @@ class _EmailEntryScreenState extends ConsumerState<EmailEntryScreen> {
             autofillHints: const [AutofillHints.email],
             decoration: InputDecoration(
               errorText: _emailError,
-              labelText: "Email address",
+              label: const RequiredLabel("Email address"),
               helperText: "Your verification code is sent here",
               prefixIcon: const Icon(Icons.mail_outline),
             ),
