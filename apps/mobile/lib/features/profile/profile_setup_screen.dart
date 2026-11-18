@@ -42,16 +42,13 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String? _photoFilename;
   bool _saving = false;
   bool _loadingExisting = true;
-  // Phone number is already collected (and required) on the signup screen
-  // for brand-new accounts, so it is only shown here when editing an existing
-  // profile, or when the signup hand-off was lost (e.g. a page reload).
+  // The phone number is prefilled from the signup screen for brand-new
+  // accounts and always shown, so a typo can be fixed before continuing.
   bool _isNewProfile = true;
-  bool _needsPhone = false;
   String? _error;
   String? _nameError;
   String? _phoneError;
 
-  bool get _showPhone => !_isNewProfile || _needsPhone;
   bool get _hasPhoto => _photoBytes != null || _existingPhotoUrl != null;
 
   @override
@@ -111,7 +108,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       _error = null;
       _nameError = name.isEmpty ? "Tell us what to call you" : null;
       if (!phoneValid) {
-        if (_isNewProfile) _needsPhone = true;
         _phoneError = _isNewProfile && rawPhone.isEmpty
             ? "Add your phone number to continue"
             : _country.invalidMessage;
@@ -154,6 +150,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Signs out and returns to the email screen, for someone who signed up with
+  /// the wrong email. Only offered before a profile exists.
+  Future<void> _startOver() async {
+    await ref.read(authControllerProvider.notifier).logout();
+    ref.read(pendingSignupPhoneNumberProvider.notifier).state = null;
+    if (mounted) context.go("/email");
   }
 
   @override
@@ -284,24 +288,33 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               ],
             ),
           ),
-          if (_showPhone) ...[
-            const SectionHeader("Contact"),
-            AppCard(
-              child: PhoneField(
-                controller: _phoneController,
-                country: _country,
-                onCountryChanged: (country) => setState(() => _country = country),
-                onChanged: (_) {
-                  if (_phoneError != null) setState(() => _phoneError = null);
-                },
-                errorText: _phoneError,
-                helperText: "For safety and records only. Never shown to your match.",
-              ),
+          const SectionHeader("Contact"),
+          AppCard(
+            child: PhoneField(
+              controller: _phoneController,
+              country: _country,
+              onCountryChanged: (country) => setState(() => _country = country),
+              onChanged: (_) {
+                if (_phoneError != null) setState(() => _phoneError = null);
+              },
+              errorText: _phoneError,
+              helperText: "For safety and records only. Never shown to your match.",
             ),
-          ],
+          ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.lg),
             InfoBanner(tone: AppTone.error, message: _error!),
+          ],
+          // Nothing exists yet but an empty account, so a mistyped email is
+          // fixed by starting over rather than by changing the email later.
+          if (_isNewProfile) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Center(
+              child: TextButton(
+                onPressed: _startOver,
+                child: const Text("Used the wrong email? Start over"),
+              ),
+            ),
           ],
         ],
       ),
